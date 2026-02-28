@@ -167,6 +167,9 @@ public class StudentService {
             if (ci != null) {
                 item.put("classCode", ci.getClassCode());
                 item.put("className", ci.getClassName());
+                item.put("classStatus", ci.getStatus());
+                item.put("startDate", ci.getStartDate());
+                item.put("endDate", ci.getEndDate());
             }
             result.add(item);
         }
@@ -188,9 +191,18 @@ public class StudentService {
         List<ClassInfo> classes = classInfoMapper.selectBatchIds(classIds);
         Map<Long, ClassInfo> classMap = classes.stream().collect(Collectors.toMap(ClassInfo::getId, c -> c));
 
+        // Filter out classes that have already ended
+        List<Long> activeClassIds = classIds.stream()
+                .filter(id -> classMap.containsKey(id) && classMap.get(id).getStatus() == 1)
+                .collect(Collectors.toList());
+
+        if (activeClassIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<Course> courses = courseMapper.selectList(
                 new LambdaQueryWrapper<Course>()
-                        .in(Course::getClassId, classIds)
+                        .in(Course::getClassId, activeClassIds)
                         .orderByAsc(Course::getDayOfWeek)
                         .orderByAsc(Course::getStartTime));
 
@@ -208,6 +220,8 @@ public class StudentService {
             if (ci != null) {
                 item.put("classCode", ci.getClassCode());
                 item.put("className", ci.getClassName());
+                item.put("startDate", ci.getStartDate());
+                item.put("endDate", ci.getEndDate());
             }
             result.add(item);
         }

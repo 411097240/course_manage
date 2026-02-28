@@ -74,7 +74,10 @@
         将 <strong style="color:var(--text-primary)">{{ joinStudentName }}</strong> 加入班级：
       </p>
       <el-select v-model="joinClassId" placeholder="请选择班级" style="width:100%" filterable>
-        <el-option v-for="c in classList" :key="c.id" :label="`${c.classCode} - ${c.className}`" :value="c.id" />
+        <el-option v-for="c in classList" :key="c.id" 
+                   :label="`${c.classCode} - ${c.className}`" 
+                   :value="c.id" 
+                   :disabled="joinedClasses.some(jc => jc.classId === c.id && jc.status === 1)" />
       </el-select>
       <template #footer>
         <el-button @click="joinDialogVisible = false">取消</el-button>
@@ -111,6 +114,7 @@ const joinStudentId = ref(null)
 const joinStudentName = ref('')
 const joinClassId = ref(null)
 const classList = ref([])
+const joinedClasses = ref([])
 
 const loadData = async () => {
   loading.value = true
@@ -164,9 +168,13 @@ const openJoinDialog = async (row) => {
   joinStudentId.value = row.id
   joinStudentName.value = row.name
   joinClassId.value = null
-  // 加载班级列表
-  const res = await api.getClassList({ current: 1, size: 999 })
-  classList.value = res.data.records || []
+  // 加载班级列表与该学生已有的班级
+  const [classRes, studentClassesRes] = await Promise.all([
+    api.getClassList({ current: 1, size: 999 }),
+    api.getStudentClasses(row.id)
+  ])
+  classList.value = classRes.data.records || []
+  joinedClasses.value = studentClassesRes.data || []
   joinDialogVisible.value = true
 }
 

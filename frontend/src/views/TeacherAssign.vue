@@ -52,10 +52,12 @@
       </div>
     </div>
 
-    <!-- 分配班级弹窗 -->
     <el-dialog v-model="assignDialogVisible" title="分配班级" width="460px" destroy-on-close>
       <el-select v-model="assignClassId" placeholder="请选择班级" style="width:100%" filterable>
-        <el-option v-for="c in allClasses" :key="c.id" :label="`${c.classCode} - ${c.className}`" :value="c.id" />
+        <el-option v-for="c in allClasses" :key="c.id" 
+                   :label="`${c.classCode} - ${c.className}`" 
+                   :value="c.id" 
+                   :disabled="assignedClasses.some(ac => ac.classId === c.id)" />
       </el-select>
       <template #footer>
         <el-button @click="assignDialogVisible = false">取消</el-button>
