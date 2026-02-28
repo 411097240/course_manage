@@ -1,0 +1,144 @@
+
+#user  nobody;
+worker_processes  1;
+
+error_log  logs/error.log;
+#error_log  logs/error_notice.log  notice;
+#error_log  logs/error_info.log  info;
+#error_log  logs/error_debug.log  debug;
+
+#pid        logs/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  logs/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    keepalive_timeout   65;
+    types_hash_max_size 4096;
+	
+    client_max_body_size 15m;
+
+    server {
+        listen       80;
+        server_name  localhost;
+        
+        gzip on; # 是否开启gzip
+        gzip_buffers 32 4K; # 缓冲(压缩在内存中缓冲几块? 每块多大?)
+        gzip_comp_level 6; # 推荐6 压缩级别(级别越高,压的越小,越浪费CPU计算资源)
+        gzip_min_length 1k; # 开始压缩的最小长度(再小就不要压缩了,意义不在)
+        gzip_types application/javascript text/css text/xml; # 对哪些类型的文件用压缩 如txt,xml,html ,css
+        gzip_disable "MSIE [1-6]\."; #正则匹配UA，配置禁用gzip条件。此处表示ie6及以下不启用gzip（因为ie低版本不支持）
+        gzip_http_version 1.1; # 开始压缩的http协议版本(可以不设置,目前几乎全是1.1协议)
+        gzip_vary on; # 是否传输gzip压缩标志
+
+        set $method $request_method;
+
+        #后端
+        location /qysf-api/ {
+            rewrite ^/zksf-api/(.*)$ /$1 break;
+            proxy_pass  http://127.0.0.1:18088/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_method $method;
+            proxy_connect_timeout 600s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+		
+		#后端
+        location /follow-up-api/ {
+            rewrite ^/zksf-api/(.*)$ /$1 break;
+            proxy_pass  http://127.0.0.1:19099/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_method $method;
+            proxy_connect_timeout 600s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+		
+		location /minio-cqwn-qysf/ {
+            proxy_pass  http://127.0.0.1:9000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_connect_timeout 600s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+		
+		location /minio-cqwn-follow-up/ {
+            proxy_pass  http://127.0.0.1:9000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header REMOTE-HOST $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_connect_timeout 600s;
+            proxy_read_timeout 600s;
+            proxy_send_timeout 600s;
+        }
+		
+
+        #管理前端
+        location /qysf-admin-web {
+            #try_files $uri $uri/ /index.html;
+            alias  F:/qysf-service/project/web/qysf-admin-web/;
+            index  index.html;
+        }
+		#管理前端
+        location /follow-up-platform-web {
+            alias  F:/qysf-service/project/web/follow-up-platform-web/;
+            index  index.html;
+        }
+		#满意度调查
+        location ~ /sf/[0-9]+ {
+			set $biz_code "";
+			if ($request_uri ~ ".*sf/([0-9]+)") {
+				set $biz_code "$1";
+			}
+
+			return 302 $scheme://$host:$server_port/qysf-admin-web\#/satifySurvey?code=$biz_code;
+		}
+
+        #随访通知h5
+        location ~ /wxsf/[\s\S]+ {
+            set $code "";
+            if ($request_uri ~ ".*wxsf/([\s\S]+)") {
+                set $code "$1";
+            }
+
+            return 302 $scheme://$host:$server_port/qysf-admin-web\#/visitPlanSurvey?code=$code;
+        }
+
+        #满意度二维码
+        location ~ /satisfactionQr/[0-9a-zA-Z]+ {
+                  set $code "";
+            if ($request_uri ~ ".*satisfactionQr/([0-9a-zA-Z]+)") {
+                set $code "$1";
+            }
+
+            return 302 $scheme://$host:$server_port/qysf-admin-web/#/satifySurvey?code=$code&t=1;
+        }
+    }
+
+}

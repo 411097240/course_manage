@@ -1,0 +1,34 @@
+# 部署项目至 F 盘计划
+
+此计划旨在将 `course_manage` 项目的前端和后端部署到 `F:\` 盘。
+
+## 部署环境
+- **目标磁盘**: `F:\course_manage_deploy` (新建部署目录)
+- **JDK 路径**: `F:\qysf-service\jdk\jdk-8u371`
+- **Nginx 路径**: `F:\qysf-service\compents\nginx`
+- **MySQL**: 已本地运行，数据库及数据已就绪。
+
+## 部署步骤
+1. **构建后端代码**:
+   - 在 `e:\course_manage\backend` 运行 `mvn clean package` 打包。
+   - 提取生成的 `target/course-manage-1.0.0.jar`
+2. **构建前端代码**:
+   - 确保 `vite.config.js` 等接口请求地址正确（例如指向 Nginx 或后端 API 端口）。
+   - 在 `e:\course_manage\frontend` 运行 `npm run build`。
+   - 提取生成的 `dist` 目录。
+3. **分配部署目录**:
+   - 在 `F:\` 建立目录 `F:\course_manage_deploy`
+   - 将后端 jar 包放入 `F:\course_manage_deploy\backend\`
+   - 将前端静态文件放入 Nginx 指定的 HTML 目录或 `F:\course_manage_deploy\frontend\`
+4. **配置 Nginx**:
+   - 修改 `F:\qysf-service\compents\nginx\conf\nginx.conf`
+   - 设定前端静态文件的 root 路径为前端 `dist` 或相应部署目录。
+   - 设定反向代理，将 API 请求（如 `/api/`）转发到本地 8080 端口（后端服务端口）。
+5. **编写启动脚本**:
+   - 在 `F:\course_manage_deploy\` 编写一个 `start-all.bat` 和 `stop-all.bat`。
+   - **重点**: `start-all.bat` 需要使用用户指定的 JDK 路径 (`F:\qysf-service\jdk\jdk-8u371\bin\java.exe`) 运行后端 jar 包。不再依赖系统环境变量。
+   - `start-all.bat` 需要启动 Nginx (`start nginx` in `F:\qysf-service\compents\nginx`).
+
+## User Review Required
+- 前端 API 的 base URL 是什么？通常是 `/api`，需要在 Nginx 中配置代理。
+- 需要确认后端运行端口是否仍为 `8080` (基于之前 `application.yml` 查看结果)。

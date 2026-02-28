@@ -1,0 +1,63 @@
+# 教学管理系统 — 开发总结
+
+## 项目概述
+
+完成了一个完整的教学管理系统前后端项目，项目位于 `e:\course_manage`。
+
+## 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 前端 | Vue 3 + Vite 5 + Element Plus + Pinia |
+| 后端 | Java 8 + Spring Boot 2.7 + MyBatis-Plus |
+| 数据库 | MySQL 8 |
+| 认证 | JWT + Spring Security |
+
+## 项目结构
+
+```
+e:\course_manage\
+├── backend/            # Spring Boot 后端 (端口 8080)
+└── frontend/           # Vue 3 前端 (端口 5173, 代理 /api → 8080)
+```
+
+## 功能模块
+
+1. **用户登录** — JWT 认证，默认管理员 `admin / admin123`
+2. **班级管理** — CRUD，自动生成编码 `BJ2026-0001`
+3. **课程排课** — 周视图 + 列表视图，支持新增/编辑/删除
+4. **学生管理** — CRUD，自动生成学号 `S202600001`
+5. **学生入班/出班** — 入班弹窗选班级，出班确认
+6. **学生详情** — 个人信息 + 所有在读班级课程表（周视图）
+7. **教师班级分配** — 管理员专属，左右双栏布局
+
+## 验证结果
+
+| 项目 | 状态 |
+|---|---|
+| 前端 `vite build` | ✅ 编译通过 |
+
+## 启动步骤
+
+### 1. 初始化数据库
+```sql
+-- 执行 backend/src/main/resources/sql/init.sql
+```
+
+### 2. 修改数据库连接
+编辑 [backend/src/main/resources/application.yml](file:///e:/course_manage/backend/src/main/resources/application.yml)，修改 `username` 和 [password](file:///e:/course_manage/backend/src/main/java/com/cm/config/SecurityConfig.java#37-41)。
+
+### 3. 启动后端
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+### 4. 启动前端
+```bash
+cd frontend
+npm run dev
+```
+
+### 5. 访问
+浏览器打开 `http://localhost:5173`，使用 `admin / admin123` 登录。

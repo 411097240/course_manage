@@ -1,0 +1,231 @@
+# 教学管理系统 — 实现方案
+
+## 概述
+
+构建一个教学管理系统 Web 端，涵盖用户登录、班级管理、课程排课、学生管理、学生入班/出班、教师班级分配等功能。
+
+- **前端**：Vue 3 + Vite + Element Plus + Pinia + Vue Router
+- **后端**：Java 8 + Spring Boot 2.7 + MyBatis-Plus + JWT
+- **数据库**：MySQL 8
+
+---
+
+## 项目目录结构
+
+```
+e:\course_manage\
+├── backend/                  # Spring Boot 后端
+│   ├── pom.xml
+│   └── src/main/java/com/cm/
+│       ├── CmApplication.java
+│       ├── config/           # 配置（CORS, Security, JWT等）
+│       ├── controller/       # REST 控制器
+│       ├── service/          # 业务逻辑
+│       ├── mapper/           # MyBatis-Plus Mapper
+│       ├── entity/           # 实体类
+│       ├── dto/              # 数据传输对象
+│       ├── util/             # 工具类（编码生成等）
+│       └── common/           # 通用类（Result, PageParam等）
+│   └── src/main/resources/
+│       ├── application.yml
+│       └── sql/init.sql      # 数据库初始化脚本
+├── frontend/                 # Vue 3 前端
+│   ├── package.json
+│   └── src/
+│       ├── api/              # 接口调用
+│       ├── views/            # 页面
+│       ├── components/       # 公共组件
+│       ├── router/           # 路由
+│       ├── stores/           # Pinia 状态管理
+│       └── utils/            # 工具方法
+```
+
+---
+
+## 数据库设计
+
+### ER 关系图
+
+```mermaid
+erDiagram
+    USER ||--o{ USER_CLASS : "管理"
+    CLASS ||--o{ USER_CLASS : "被管理"
+    CLASS ||--o{ COURSE : "包含"
+    STUDENT ||--o{ STUDENT_CLASS : "入班"
+    CLASS ||--o{ STUDENT_CLASS : "接收"
+
+    USER {
+        bigint id PK
+        varchar username "登录名"
+        varchar password "密码(BCrypt)"
+        varchar real_name "真实姓名"
+        tinyint role "角色: 1管理员 2教师"
+        tinyint status "状态: 0禁用 1启用"
+        datetime create_time
+    }
+
+    CLASS {
+        bigint id PK
+        varchar class_code UK "班级编码(如 BJ2026-0001)"
+        varchar class_name "班级名称"
+        varchar description "描述"
+        tinyint status "状态: 0已结束 1进行中"
+        datetime create_time
+    }
+
+    USER_CLASS {
+        bigint id PK
+        bigint user_id FK
+        bigint class_id FK
+        datetime create_time
+    }
+
+    COURSE {
+        bigint id PK
+        bigint class_id FK
+        varchar course_name "课程名称"
+        varchar teacher_name "授课教师"
+        tinyint day_of_week "星期几(1-7)"
+        varchar start_time "开始时间(HH:mm)"
+        varchar end_time "结束时间(HH:mm)"
+        varchar location "上课地点"
+        datetime create_time
+    }
+
+    STUDENT {
+        bigint id PK
+        varchar student_no UK "学号(如 S202600001)"
+        varchar name "姓名"
+        varchar phone "手机号"
+        varchar id_card "身份证号"
+        tinyint gender "性别: 1男 2女"
+        tinyint status "状态: 0禁用 1启用"
+        datetime create_time
+    }
+
+    STUDENT_CLASS {
+        bigint id PK
+        bigint student_id FK
+        bigint class_id FK
+        tinyint status "状态: 0已退出 1在读"
+        datetime join_time "入班时间"
+        datetime leave_time "出班时间"
+    }
+```
+
+### 唯一编码生成规则
+
+| 编码 | 格式 | 示例 | 生成规则 |
+|------|------|------|----------|
+| **班级编码** | `BJ{年份}-{4位序号}` | `BJ2026-0001` | 年份取创建年份，序号从当年已有最大值自增 |
+| **学生学号** | `S{年份}{5位序号}` | `S202600001` | 年份取创建年份，序号从当年已有最大值自增 |
+
+> 使用数据库 `SELECT MAX()` + 应用侧自增，简洁可靠。
+
+---
+
+## 核心 API 设计
+
+### 认证模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/auth/login` | 用户登录，返回 JWT |
+| GET  | `/api/auth/info` | 获取当前用户信息 |
+
+### 班级管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET    | `/api/class/list` | 分页查询班级列表 |
+| POST   | `/api/class` | 新建班级（自动生成编码） |
+| PUT    | `/api/class` | 修改班级信息 |
+| DELETE | `/api/class/{id}` | 删除班级 |
+
+### 课程排课
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET    | `/api/course/list?classId=` | 查询班级课程列表 |
+| POST   | `/api/course` | 新增课程 |
+| PUT    | `/api/course` | 修改课程 |
+| DELETE | `/api/course/{id}` | 删除课程 |
+
+### 学生管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET    | `/api/student/list` | 分页查询学生列表 |
+| POST   | `/api/student` | 新增学生（自动生成学号） |
+| PUT    | `/api/student` | 修改学生信息 |
+| DELETE | `/api/student/{id}` | 删除学生 |
+| GET    | `/api/student/{id}/schedule` | 查询学生所有班级的课程表 |
+
+### 学生入班/出班
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/student-class/join` | 学生入班 |
+| POST | `/api/student-class/leave` | 学生出班 |
+| GET  | `/api/student-class/list?studentId=` | 查询学生已加入班级 |
+
+### 教师班级分配
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET  | `/api/user-class/list?userId=` | 查询教师管理的班级 |
+| POST | `/api/user-class/assign` | 给教师分配班级 |
+| POST | `/api/user-class/remove` | 移除教师的班级 |
+| GET  | `/api/user/teachers` | 查询所有教师列表 |
+
+---
+
+## 前端页面设计
+
+| 页面 | 路径 | 说明 |
+|------|------|------|
+| 登录页 | `/login` | 用户名密码登录 |
+| 首页/仪表盘 | `/` | 数据概览 |
+| 班级管理 | `/class` | 班级 CRUD + 进入班级查看课程 |
+| 课程排课 | `/class/:id/course` | 某班级的课程表管理（表格+周视图） |
+| 学生管理 | `/student` | 学生 CRUD |
+| 学生详情 | `/student/:id` | 学生信息 + 所有已加入班级的课程表 |
+| 教师班级分配 | `/assign` | 管理员给教师分配班级 |
+
+---
+
+## 权限设计
+
+| 角色 | 权限 |
+|------|------|
+| **管理员 (role=1)** | 全部功能 + 给教师分配班级 |
+| **教师 (role=2)** | 仅管理自己被分配的班级及其下课程、学生 |
+
+> [!NOTE]
+> 已确认：管理员可以给教师分配班级管理权限。教师仅能管理自己被分配的班级。
+
+---
+
+## 关键技术决策
+
+1. **认证方案**：JWT Token，无状态认证，前端存 localStorage
+2. **密码加密**：BCrypt
+3. **分页**：MyBatis-Plus 内置分页插件
+4. **前端 UI 库**：Element Plus — 成熟的 Vue 3 组件库，表格/表单/对话框等开箱即用
+5. **状态管理**：Pinia
+6. **HTTP 请求**：Axios + 请求/响应拦截器统一处理 Token 和错误
+
+---
+
+## 验证计划
+
+### 自动化验证
+- 后端启动后，通过 `curl` / Postman 对所有 API 接口做端到端测试
+- 前端启动后，通过浏览器工具验证页面渲染和交互
+
+### 浏览器功能验证
+使用 browser_subagent 逐一验证以下场景：
+1. **登录** → 输入用户名密码 → 登录成功跳转首页
+2. **班级 CRUD** → 新建班级（验证编码自动生成）→ 编辑 → 删除
+3. **课程排课** → 进入某班级 → 添加课程 → 查看周视图
+4. **学生 CRUD** → 新建学生（验证学号自动生成）→ 编辑
+5. **学生入班/出班** → 将学生加入班级 → 退出班级
+6. **学生详情页** → 查看课程表信息
+7. **教师分配** → 管理员给教师分配班级 → 教师登录只看到自己的班级
+
+### 用户手动验证
+- 请用户在浏览器中体验登录、班级管理、学生管理等完整业务流程
