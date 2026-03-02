@@ -37,6 +37,12 @@
           </svg>
           <span v-show="!isCollapsed">学生管理</span>
         </router-link>
+        <router-link to="/homework" class="nav-item" active-class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          <span v-show="!isCollapsed">作业管理</span>
+        </router-link>
         <router-link v-if="userStore.isAdmin()" to="/assign" class="nav-item" active-class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>

@@ -17,8 +17,15 @@ public class Student {
     private Integer gender;
     /** 状态: 0禁用 1启用 */
     private Integer status;
+    private String accessToken;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+    
+    @TableField(exist = false)
+    private String activeClassNames;
+
+    @TableLogic
+    private Integer deleted;
 }

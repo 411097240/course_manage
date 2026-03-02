@@ -13,6 +13,12 @@
       <el-table :data="tableData" stripe v-loading="loading" style="width:100%">
         <el-table-column prop="studentNo" label="学号" min-width="140" />
         <el-table-column prop="name" label="姓名" min-width="120" />
+        <el-table-column label="在读班级" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.activeClassNames">{{ row.activeClassNames }}</span>
+            <span v-else style="color:var(--text-muted)">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="性别" min-width="80">
           <template #default="{ row }">{{ row.gender === 1 ? '男' : row.gender === 2 ? '女' : '-' }}</template>
         </el-table-column>

@@ -77,4 +77,26 @@ export default {
   getTeachers: () => request.get('/user-class/teachers'),
   createTeacher: (data) => request.post('/user-class/teacher', data),
   resetPassword: (data) => request.post('/user-class/reset-password', data),
+
+  // 文件上传
+  uploadFile: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request.post('/common/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  // 作业管理 (PC端)
+  getHomeworkList: (params) => request.get('/homework/page', { params }),
+  createHomework: (data) => request.post('/homework/create', data),
+  updateHomework: (data) => request.post('/homework/update', data),
+  deleteHomework: (id) => request.post(`/homework/delete`, null, { params: { id } }),
+  getStudentHomeworkList: (homeworkId) => request.get('/homework/studentHomeworkList', { params: { homeworkId } }),
+  reviewHomework: (data) => request.post('/homework/review', data),
+
+  // H5 作业提交流程 (免密)
+  getH5HomeworkList: (token, classId) => request.get('/h5/homework/list', { params: { token, classId } }),
+  getH5HomeworkDetail: (homeworkId, token) => request.get('/h5/homework/detail', { params: { homeworkId, token } }),
+  submitH5Homework: (data, token) => request.post('/h5/homework/submit', data, { params: { token } })
 }

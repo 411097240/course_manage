@@ -9,6 +9,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/h5/homework',
+    name: 'H5Homework',
+    component: () => import('../views/H5Homework.vue'),
+    meta: { title: '在线作业', requiresAuth: false }
+  },
+  {
     path: '/',
     component: () => import('../views/Layout.vue'),
     redirect: '/dashboard',
@@ -48,6 +54,12 @@ const routes = [
         name: 'TeacherAssign',
         component: () => import('../views/TeacherAssign.vue'),
         meta: { title: '教师班级分配', adminOnly: true }
+      },
+      {
+        path: 'homework',
+        name: 'HomeworkList',
+        component: () => import('../views/HomeworkList.vue'),
+        meta: { title: '班级作业管理' }
       }
     ]
   }

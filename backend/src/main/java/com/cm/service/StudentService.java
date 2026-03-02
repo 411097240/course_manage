@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Service
 public class StudentService {
@@ -65,7 +66,42 @@ public class StudentService {
                     .or().like(Student::getPhone, keyword));
         }
         wrapper.orderByDesc(Student::getCreateTime);
-        return studentMapper.selectPage(new Page<>(current, size), wrapper);
+        Page<Student> pageResult = studentMapper.selectPage(new Page<>(current, size), wrapper);
+        
+        List<Student> records = pageResult.getRecords();
+        if (!records.isEmpty()) {
+            List<Long> sids = records.stream().map(Student::getId).collect(Collectors.toList());
+            List<StudentClass> currentClasses = studentClassMapper.selectList(
+                    new LambdaQueryWrapper<StudentClass>()
+                            .in(StudentClass::getStudentId, sids)
+                            .eq(StudentClass::getStatus, 1)
+            );
+            if (!currentClasses.isEmpty()) {
+                List<Long> cids = currentClasses.stream().map(StudentClass::getClassId).distinct().collect(Collectors.toList());
+                List<ClassInfo> activeClasses = classInfoMapper.selectList(
+                        new LambdaQueryWrapper<ClassInfo>()
+                                .in(ClassInfo::getId, cids)
+                                .eq(ClassInfo::getStatus, 1)
+                );
+                Map<Long, String> classNameMap = activeClasses.stream()
+                        .collect(Collectors.toMap(ClassInfo::getId, ClassInfo::getClassName));
+
+                Map<Long, List<String>> studentClassMap = new HashMap<>();
+                for (StudentClass sc : currentClasses) {
+                    if (classNameMap.containsKey(sc.getClassId())) {
+                        studentClassMap.computeIfAbsent(sc.getStudentId(), k -> new ArrayList<>())
+                                .add(classNameMap.get(sc.getClassId()));
+                    }
+                }
+                for (Student s : records) {
+                    List<String> names = studentClassMap.get(s.getId());
+                    if (names != null && !names.isEmpty()) {
+                        s.setActiveClassNames(String.join("，", names));
+                    }
+                }
+            }
+        }
+        return pageResult;
     }
 
     public Student getById(Long id) {
@@ -74,6 +110,7 @@ public class StudentService {
 
     public void save(Student student) {
         student.setStudentNo(generateStudentNo());
+        student.setAccessToken(UUID.randomUUID().toString().replace("-", ""));
         studentMapper.insert(student);
     }
 
@@ -104,15 +141,28 @@ public class StudentService {
      * 学生入班
      */
     public String joinClass(Long studentId, Long classId) {
-        // 检查是否已在读
-        StudentClass existing = studentClassMapper.selectOne(
+        // 取出该学生在该班级的所有历史记录(升序)
+        List<StudentClass> existingList = studentClassMapper.selectList(
                 new LambdaQueryWrapper<StudentClass>()
                         .eq(StudentClass::getStudentId, studentId)
                         .eq(StudentClass::getClassId, classId)
-                        .eq(StudentClass::getStatus, 1));
-        if (existing != null) {
-            return "该学生已在此班级中";
+                        .orderByAsc(StudentClass::getJoinTime));
+
+        if (!existingList.isEmpty()) {
+            for (StudentClass sc : existingList) {
+                if (sc.getStatus() != null && sc.getStatus() == 1) {
+                    return "该学生已在此班级中";
+                }
+            }
+            // 复用最早的一条记录
+            StudentClass oldestRecord = existingList.get(0);
+            oldestRecord.setStatus(1);
+            oldestRecord.setJoinTime(LocalDateTime.now());
+            // 如果使用 leaveTime，复用时应将其置空（但基于数据库兼容性可暂留，只要状态能表明在读即可）
+            studentClassMapper.updateById(oldestRecord);
+            return null;
         }
+
         StudentClass sc = new StudentClass();
         sc.setStudentId(studentId);
         sc.setClassId(classId);
@@ -126,17 +176,19 @@ public class StudentService {
      * 学生出班
      */
     public String leaveClass(Long studentId, Long classId) {
-        StudentClass existing = studentClassMapper.selectOne(
+        List<StudentClass> existingList = studentClassMapper.selectList(
                 new LambdaQueryWrapper<StudentClass>()
                         .eq(StudentClass::getStudentId, studentId)
                         .eq(StudentClass::getClassId, classId)
                         .eq(StudentClass::getStatus, 1));
-        if (existing == null) {
+        if (existingList.isEmpty()) {
             return "该学生不在此班级中";
         }
-        existing.setStatus(0);
-        existing.setLeaveTime(LocalDateTime.now());
-        studentClassMapper.updateById(existing);
+        for (StudentClass existing : existingList) {
+            existing.setStatus(0);
+            existing.setLeaveTime(LocalDateTime.now());
+            studentClassMapper.updateById(existing);
+        }
         return null;
     }
 

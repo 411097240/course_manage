@@ -15,7 +15,7 @@
         <span :class="['status-badge', student.status === 1 ? 'active' : 'inactive']" style="margin-left:auto;margin-right:16px;">
           {{ student.status === 1 ? '启用' : '禁用' }}
         </span>
-        <el-button type="primary" @click="printVoucher">打印入班凭证</el-button>
+        <el-button type="primary" @click="openPrintDialog">打印入班凭证</el-button>
       </div>
       <div class="info-grid">
         <div class="info-item"><label>性别</label><span>{{ student.gender === 1 ? '男' : student.gender === 2 ? '女' : '-' }}</span></div>
@@ -55,8 +55,9 @@
         <el-table-column label="入班时间" width="180">
           <template #default="{ row }">{{ formatTime(row.joinTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120">
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
+            <el-button v-if="row.status === 1" size="small" type="primary" plain @click="copyHomeworkLink(row.classId)">作业链接</el-button>
             <el-button v-if="row.status === 1 && row.classStatus === 1" size="small" type="danger" @click="handleLeave(row.classId)">出班</el-button>
           </template>
         </el-table-column>
@@ -88,11 +89,23 @@
       </div>
     </div>
     
+    <!-- 凭证班级选择弹窗 -->
+    <el-dialog v-model="printDialogVisible" title="选择打印班级" width="400px" destroy-on-close>
+      <p style="margin-bottom:12px;color:var(--text-secondary)">请选择要打印入班凭证的班级：</p>
+      <el-select v-model="printClassId" placeholder="请选择进行中的班级" style="width:100%">
+        <el-option v-for="c in activeClasses" :key="c.classId" :label="`${c.classCode} - ${c.className}`" :value="c.classId" />
+      </el-select>
+      <template #footer>
+        <el-button @click="printDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="executePrint">确认打印</el-button>
+      </template>
+    </el-dialog>
+    
     <!-- 打印用的入班凭证模板 (仅在打印时可见) -->
     <div class="print-voucher-container">
       <div class="voucher-header">
+        <div class="brand-title">享学未来</div>
         <h2>🎉 入班凭证 🎉</h2>
-        <p>此凭证为学生上课依据，请妥善保管。</p>
       </div>
 
       <div class="voucher-section" v-if="student">
@@ -105,7 +118,7 @@
         </div>
       </div>
 
-      <div class="voucher-section" v-if="classes.length">
+      <div class="voucher-section" v-if="selectedPrintClassData">
         <h3 class="section-title">入选班级</h3>
         <table class="voucher-table">
           <thead>
@@ -116,16 +129,16 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="c in classes.filter(cls => cls.status === 1)" :key="c.classId">
-              <td>{{ c.classCode }}</td>
-              <td>{{ c.className }}</td>
-              <td>{{ c.startDate ? `${c.startDate} ~ ${c.endDate}` : '-' }}</td>
+            <tr>
+              <td>{{ selectedPrintClassData.classCode }}</td>
+              <td>{{ selectedPrintClassData.className }}</td>
+              <td>{{ selectedPrintClassData.startDate ? `${selectedPrintClassData.startDate} ~ ${selectedPrintClassData.endDate}` : '-' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="voucher-section" v-if="schedule.length">
+      <div class="voucher-section" v-if="printSchedule.length">
         <h3 class="section-title">固定课程排期</h3>
         <table class="voucher-table">
           <thead>
@@ -134,19 +147,25 @@
               <th>时间</th>
               <th>授课教师</th>
               <th>上课地点</th>
-              <th>所属班级</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="course in schedule" :key="course.courseId">
+            <tr v-for="course in printSchedule" :key="course.courseId">
               <td>{{ dayNames[course.dayOfWeek - 1] }}</td>
               <td>{{ course.startTime }} - {{ course.endTime }}</td>
               <td>{{ course.teacherName || '-' }}</td>
               <td>{{ course.location || '-' }}</td>
-              <td>{{ course.className }}</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="voucher-section hw-link-section">
+        <h3 class="section-title">专属课后作业提交通道</h3>
+        <div class="hw-link-box">
+          <p>请妥善保管您的专属链接，通过手机浏览器直接访问该链接即可查看本班作业要求并提交作业解答：</p>
+          <div class="url-text">{{ generateVoucherShareLink }}</div>
+        </div>
       </div>
       
       <div class="voucher-footer">
@@ -157,7 +176,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
@@ -172,6 +191,21 @@ const scheduleLoading = ref(false)
 const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 const selectedDate = ref(new Date().toISOString().split('T')[0])
+
+// 打印专用变量
+const printDialogVisible = ref(false)
+const printClassId = ref(null)
+const activeClasses = computed(() => classes.value.filter(c => c.status === 1 && c.classStatus === 1))
+const selectedPrintClassData = computed(() => activeClasses.value.find(c => c.classId === printClassId.value))
+const printSchedule = computed(() => {
+  if (!printClassId.value) return []
+  return schedule.value.filter(c => c.classId === printClassId.value)
+})
+
+const generateVoucherShareLink = computed(() => {
+  if (!student.value || !printClassId.value) return ''
+  return `${window.location.origin}/h5/homework?token=${student.value.accessToken}&classId=${printClassId.value}`
+})
 
 const formatTime = (t) => {
   if (!t) return '-'
@@ -228,6 +262,40 @@ const loadData = async () => {
   }
 }
 
+const copyHomeworkLink = (classId) => {
+  if (!student.value || !student.value.accessToken) {
+    ElMessage.error('无法获取学生Token信息')
+    return
+  }
+  const link = `${window.location.origin}/h5/homework?token=${student.value.accessToken}&classId=${classId}`
+  
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => {
+      ElMessage.success('已成功复制该学生的专属作业链接！')
+    }).catch(() => {
+      fallbackCopy(link)
+    })
+  } else {
+    fallbackCopy(link)
+  }
+}
+
+const fallbackCopy = (text) => {
+  const textArea = document.createElement("textarea")
+  textArea.value = text
+  textArea.style.position = "fixed"
+  document.body.appendChild(textArea)
+  textArea.focus()
+  textArea.select()
+  try {
+    document.execCommand('copy')
+    ElMessage.success('已成功复制该学生的专属作业链接！')
+  } catch (err) {
+    ElMessage.error('复制失败，请手动组合链接')
+  }
+  document.body.removeChild(textArea)
+}
+
 const handleLeave = (classId) => {
   ElMessageBox.confirm('确定将该学生退出此班级吗？', '提示', { type: 'warning' }).then(async () => {
     await api.leaveClass({ studentId, classId })
@@ -236,8 +304,74 @@ const handleLeave = (classId) => {
   }).catch(() => {})
 }
 
-const printVoucher = () => {
-  window.print()
+const openPrintDialog = () => {
+  if (activeClasses.value.length === 0) {
+    ElMessage.warning('该学生当前没有处于进行中的班级，无法打印入班凭证')
+    return
+  }
+  printClassId.value = activeClasses.value[0].classId // 默认选中第一个
+  printDialogVisible.value = true
+}
+
+const executePrint = () => {
+  if (!printClassId.value) {
+    ElMessage.warning('请选择要打印的班级')
+    return
+  }
+  printDialogVisible.value = false
+  
+  // 等待DOM通过Vue响应式更新完凭证模板的数据
+  setTimeout(() => {
+    const printContent = document.querySelector('.print-voucher-container').innerHTML
+    
+    // 创建一个隐藏的 iframe 作为干净的打印沙盒
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    document.body.appendChild(iframe)
+    
+    const doc = iframe.contentWindow.document
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>入班凭证</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; color: #000; background: #fff; line-height: 1.5; }
+            .voucher-header { text-align: center; border-bottom: 2px dashed #bbb; padding-bottom: 25px; margin-bottom: 30px; }
+            .brand-title { font-size: 36px; color: #333; margin: 0 0 12px; font-weight: 800; letter-spacing: 4px; }
+            .voucher-header h2 { font-size: 22px; margin: 0; color: #555; font-weight: normal; letter-spacing: 2px; }
+            .voucher-header p { color: #666; margin: 0; font-size: 14px; }
+            .voucher-section { margin-bottom: 30px; }
+            .section-title { font-size: 18px; margin-bottom: 15px; border-left: 4px solid #6366f1; padding-left: 10px; font-weight: bold; }
+            .info-row { display: flex; justify-content: space-between; flex-wrap: wrap; background: #f8f9fa; padding: 15px 20px; border-radius: 8px; border: 1px solid #ddd; }
+            .info-row span { font-size: 15px; min-width: 200px; margin-bottom: 8px; }
+            .voucher-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .voucher-table th, .voucher-table td { border: 1px solid #ccc; padding: 10px; text-align: center; font-size: 14px; }
+            .voucher-table th { background-color: #f1f1f1; font-weight: bold; }
+            .hw-link-box { background: #fdfdfd; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; margin-top: 10px; }
+            .hw-link-box p { color: #555; margin: 0 0 10px 0; font-size: 14px; }
+            .url-text { word-break: break-all; font-family: monospace; font-size: 14px; color: #6366f1; background: #eef2ff; padding: 10px; border-radius: 6px; }
+            .voucher-footer { margin-top: 50px; text-align: right; font-size: 13px; color: #888; border-top: 1px dashed #ccc; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+        </body>
+      </html>
+    `)
+    doc.close()
+    
+    // 渲染沙盒完毕后，拉起浏览器系统的原生打印机
+    setTimeout(() => {
+      iframe.contentWindow.focus()
+      iframe.contentWindow.print()
+      // 打印对话框关闭后清理掉生成的 iframe DOM
+      setTimeout(() => {
+        document.body.removeChild(iframe)
+      }, 1000)
+    }, 200)
+
+  }, 100)
 }
 
 onMounted(loadData)
@@ -363,101 +497,8 @@ onMounted(loadData)
   padding: 20px 0;
 }
 
-/* --- 打印样式区 --- */
+/* --- 打印容器隐藏 --- */
 .print-voucher-container {
-  display: none; /* 平时隐藏 */
-}
-
-@media print {
-  /* 隐藏系统所有无关UI，包括侧边栏、顶部导航以及本页卡片内容 */
-  :root {
-    --text-primary: #000;
-  }
-  
-  body * {
-    visibility: hidden;
-  }
-
-  .print-voucher-container, 
-  .print-voucher-container * {
-    visibility: visible;
-  }
-
-  .print-voucher-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: #fff;
-    color: #000;
-    padding: 20px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-  }
-
-  .voucher-header {
-    text-align: center;
-    border-bottom: 2px solid #ccc;
-    padding-bottom: 20px;
-    margin-bottom: 30px;
-  }
-
-  .voucher-header h2 {
-    font-size: 28px;
-    margin: 0 0 10px;
-    display: inline-block;
-  }
-
-  .voucher-header p {
-    color: #666;
-    margin: 0;
-  }
-
-  .voucher-section {
-    margin-bottom: 30px;
-  }
-
-  .section-title {
-    font-size: 18px;
-    margin-bottom: 15px;
-    border-left: 4px solid #6366f1;
-    padding-left: 10px;
-  }
-
-  .info-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 30px;
-    font-size: 15px;
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-  }
-
-  .voucher-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-
-  .voucher-table th, 
-  .voucher-table td {
-    border: 1px solid #ccc;
-    padding: 10px;
-    text-align: center;
-    font-size: 14px;
-  }
-
-  .voucher-table th {
-    background-color: #f1f1f1;
-    font-weight: bold;
-  }
-
-  .voucher-footer {
-    margin-top: 50px;
-    text-align: right;
-    font-size: 13px;
-    color: #888;
-  }
+  display: none;
 }
 </style>

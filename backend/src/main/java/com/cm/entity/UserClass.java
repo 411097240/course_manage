@@ -13,4 +13,7 @@ public class UserClass {
     private Long classId;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
+    @TableLogic
+    private Integer deleted;
 }

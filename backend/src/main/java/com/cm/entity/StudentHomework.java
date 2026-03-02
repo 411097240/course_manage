@@ -2,21 +2,22 @@ package com.cm.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("class_info")
-public class ClassInfo {
+@TableName("student_homework")
+public class StudentHomework {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String classCode;
-    private String className;
-    private String description;
-    private LocalDate startDate;
-    private LocalDate endDate;
-    /** 状态: 0已结束 1进行中 */
+    private Long homeworkId;
+    private Long studentId;
+    private String submitAttachments;
+    private String teacherFeedbackAttachments;
+    private String teacherComment;
+    /** 0:待提交, 1:已提交, 2:待修正, 3:已通过 */
     private Integer status;
+    private LocalDateTime submitTime;
+    private LocalDateTime reviewTime;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

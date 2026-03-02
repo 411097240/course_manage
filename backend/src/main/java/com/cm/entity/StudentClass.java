@@ -15,4 +15,7 @@ public class StudentClass {
     private Integer status;
     private LocalDateTime joinTime;
     private LocalDateTime leaveTime;
+
+    @TableLogic
+    private Integer deleted;
 }
