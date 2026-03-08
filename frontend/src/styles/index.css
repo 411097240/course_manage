@@ -64,7 +64,7 @@ body {
 }
 
 .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
-  background: #253049 !important;
+  background: var(--bg-card) !important;
 }
 
 .el-table__fixed-right-patch,

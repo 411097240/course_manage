@@ -29,7 +29,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h3 style="color:var(--text-primary)">📖 已加入班级</h3>
       </div>
-      <el-table :data="classes" stripe v-loading="classLoading">
+      <el-table :data="classes" v-loading="classLoading">
         <el-table-column prop="classCode" label="班级编码" width="150" />
         <el-table-column prop="className" label="班级名称" min-width="150" />
         <el-table-column label="培训周期" min-width="200">

@@ -24,3 +24,5 @@ target/
 .project
 .idea/
 *.iml
+backend/uploads/
+uploads

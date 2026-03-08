@@ -36,7 +36,7 @@
     <!-- 列表视图 -->
     <div class="page-card">
       <h3 style="margin-bottom:16px;color:var(--text-primary)">📋 课程列表</h3>
-      <el-table :data="courses" stripe v-loading="loading">
+      <el-table :data="courses" v-loading="loading">
         <el-table-column label="星期" width="100">
           <template #default="{ row }">{{ dayNames[row.dayOfWeek - 1] }}</template>
         </el-table-column>

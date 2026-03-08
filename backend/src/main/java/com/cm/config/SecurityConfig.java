@@ -52,7 +52,7 @@ public class SecurityConfig {
             .and()
             .authorizeRequests()
             .antMatchers("/api/auth/login").permitAll()
-            .antMatchers("/api/h5/**", "/api/common/upload", "/uploads/**").permitAll()
+            .antMatchers("/api/h5/**", "/api/common/upload", "/api/common/download/**", "/uploads/**").permitAll()
             .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .anyRequest().authenticated()
             .and()

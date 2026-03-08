@@ -10,7 +10,7 @@
                   prefix-icon="Search" />
         <el-button type="primary" @click="loadData">搜索</el-button>
       </div>
-      <el-table :data="tableData" stripe v-loading="loading" style="width:100%">
+      <el-table :data="tableData" v-loading="loading" style="width:100%">
         <el-table-column prop="classCode" label="班级编码" min-width="160" />
         <el-table-column prop="className" label="班级名称" min-width="200" />
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />

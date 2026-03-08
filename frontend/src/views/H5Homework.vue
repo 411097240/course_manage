@@ -66,7 +66,7 @@
                 />
                 <a v-else :href="file" target="_blank" class="hw-file">
                   <span class="file-icon">📄</span>
-                  <span class="file-name">下载附件</span>
+                  <span class="file-name">{{ getFileName(file) }}</span>
                 </a>
               </template>
             </div>
@@ -109,7 +109,7 @@
                   />
                 <a v-else :href="img" target="_blank" class="hw-file">
                   <span class="file-icon">📄</span>
-                  <span class="file-name">查看附件</span>
+                  <span class="file-name">{{ getFileName(img) }}</span>
                 </a>
               </template>
             </div>
@@ -137,7 +137,7 @@
                   />
                 <a v-else :href="file" target="_blank" class="hw-file">
                   <span class="file-icon">📄</span>
-                  <span class="file-name">下载附件</span>
+                  <span class="file-name">{{ getFileName(file) }}</span>
                 </a>
               </template>
             </div>
@@ -188,8 +188,17 @@ const isImage = (url) => {
 }
 
 const getFileName = (url) => {
-  if(!url) return '未知附件'
-  const parts = url.split('/')
+  if (!url) return '未知附件'
+  const s = String(url)
+  // 检查 URL 中是否包含 name= 参数（新方案）
+  if (s.includes('name=')) {
+    const params = new URLSearchParams(s.split('?')[1])
+    const name = params.get('name')
+    if (name) return name
+  }
+  // 兼容旧方案：截取最后一段
+  const base = s.includes('?') ? s.split('?')[0] : s
+  const parts = base.split('/')
   return parts[parts.length - 1]
 }
 

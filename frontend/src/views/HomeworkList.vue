@@ -16,7 +16,7 @@
     </div>
 
     <div class="page-card">
-      <el-table :data="homeworkList" stripe v-loading="loading">
+      <el-table :data="homeworkList" v-loading="loading">
         <el-table-column prop="title" label="作业标题" min-width="150" />
         <el-table-column prop="className" label="所属班级" min-width="150" />
         <el-table-column label="截止时间" width="180">
@@ -101,7 +101,7 @@
 
     <!-- 批改作业弹窗 -->
     <el-dialog v-model="reviewDialog" :title="`批改 - ${currentHomework.title}`" width="80%" top="5vh">
-      <el-table :data="studentList" stripe height="400">
+      <el-table :data="studentList" height="400">
         <el-table-column prop="studentNo" label="学号" width="120" />
         <el-table-column prop="studentName" label="姓名" width="120" />
         <el-table-column label="提交状态" width="100">
@@ -289,7 +289,15 @@ const isImage = (url) => {
 const getFileName = (url) => {
   if (!url) return ''
   const s = String(url)
-  return s.length > 15 ? "..." + s.substring(s.lastIndexOf('/') + 1).slice(-15) : s.substring(s.lastIndexOf('/') + 1)
+  // 检查 URL 中是否包含 name= 这里的参数（新方案）
+  if (s.includes('name=')) {
+    const params = new URLSearchParams(s.split('?')[1])
+    const name = params.get('name')
+    if (name) return name
+  }
+  // 兼容旧方案：截取最后一段
+  const base = s.includes('?') ? s.split('?')[0] : s
+  return base.substring(base.lastIndexOf('/') + 1)
 }
 
 const openLink = (url) => {
@@ -565,7 +573,6 @@ onMounted(loadData)
 .header-content h2 { font-size: 24px; color: var(--text-primary); }
 .header-content p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
 .page-card {
-  background: white;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);

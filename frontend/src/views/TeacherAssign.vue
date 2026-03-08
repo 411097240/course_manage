@@ -37,7 +37,7 @@
             + 分配班级
           </el-button>
         </div>
-        <el-table v-if="selectedTeacherId" :data="assignedClasses" stripe v-loading="classLoading" style="width:100%">
+        <el-table v-if="selectedTeacherId" :data="assignedClasses" v-loading="classLoading" style="width:100%">
           <el-table-column prop="classCode" label="班级编码" min-width="160" />
           <el-table-column prop="className" label="班级名称" min-width="180" />
           <el-table-column label="操作" min-width="120">

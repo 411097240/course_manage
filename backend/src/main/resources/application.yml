@@ -21,3 +21,6 @@ mybatis-plus:
 jwt:
   secret: CourseManageSecretKey2026ForJwtToken
   expiration: 86400000
+
+file:
+  upload-path: ./uploads
