@@ -59,4 +59,10 @@ public class UserClassController {
         userService.resetPassword(userId, newPassword);
         return Result.ok();
     }
+
+    @PostMapping("/toggle-status")
+    public Result<?> toggleStatus(@RequestBody Map<String, Long> params) {
+        userService.toggleTeacherStatus(params.get("userId"));
+        return Result.ok();
+    }
 }

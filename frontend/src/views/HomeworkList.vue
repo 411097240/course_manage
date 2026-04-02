@@ -25,6 +25,11 @@
         <el-table-column label="创建时间" width="180">
           <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
         </el-table-column>
+        <el-table-column label="公布答案" width="100">
+          <template #default="{ row }">
+            <el-switch v-model="row.isAnswerPublished" :active-value="1" :inactive-value="0" @change="toggleAnswerStatus(row)" />
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="280">
           <template #default="{ row }">
             <el-button link type="primary" @click="openEditDialog(row)">查看/编辑</el-button>
@@ -85,6 +90,36 @@
                     查看
                   </span>
                   <span class="el-upload-list__item-delete" style="cursor:pointer; margin-left:10px;" @click="handleVisualRemove(file)">
+                    移除
+                  </span>
+                </span>
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="答案附件">
+          <el-upload
+            action="/api/common/upload"
+            :headers="headers"
+            list-type="picture-card"
+            :on-success="handleAnswerUploadSuccess"
+            :on-remove="handleAnswerUploadRemove"
+            :file-list="answerFileList"
+            multiple
+          >
+            <el-icon><i class="el-icon-plus"></i>上传</el-icon>
+            <template #file="{ file }">
+              <div style="width:100%; height:100%; border-radius:6px; overflow:hidden;">
+                <img class="el-upload-list__item-thumbnail" v-if="isImage(file.response ? file.response.data : file.url)" :src="file.response ? file.response.data : file.url" style="width:100%; height:100%; object-fit:cover;" />
+                <div v-else style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f4f5f7;">
+                  <span style="font-size:16px; font-weight:bold; color:#606266;">PDF文档</span>
+                  <span style="font-size:12px; color:#909399; text-align:center; padding:0 5px; word-break:break-all;" class="ellipsis">{{ getFileName(file.response ? file.response.data : file.url) }}</span>
+                </div>
+                <span class="el-upload-list__item-actions">
+                  <span class="el-upload-list__item-preview" style="cursor:pointer;" @click="openLink(file.response ? file.response.data : file.url)">
+                    查看
+                  </span>
+                  <span class="el-upload-list__item-delete" style="cursor:pointer; margin-left:10px;" @click="handleAnswerVisualRemove(file)">
                     移除
                   </span>
                 </span>
@@ -245,6 +280,21 @@ const form = ref({ classId: '', title: '', description: '', deadline: '', attach
 const uploadedFiles = ref([])
 const fileList = ref([])
 const filterClassId = ref('')
+const answerUploadedFiles = ref([])
+const answerFileList = ref([])
+
+const headers = ref({
+  Authorization: `Bearer ${localStorage.getItem('cm_token')}`
+})
+
+const toggleAnswerStatus = async (row) => {
+  try {
+    await api.updateHomework(row)
+    ElMessage.success(row.isAnswerPublished === 1 ? '已公布答案' : '已取消公布')
+  } catch (e) {
+    row.isAnswerPublished = row.isAnswerPublished === 1 ? 0 : 1 // 失败回滚
+  }
+}
 
 const handleFilterChange = () => {
   currentPage.value = 1
@@ -276,9 +326,7 @@ let drawCtx = null
 let drawImgObj = null
 let isDrawingState = false
 
-const headers = ref({
-  Authorization: `Bearer ${localStorage.getItem('token')}`
-})
+
 
 const isImage = (url) => {
   if (!url) return false
@@ -334,6 +382,8 @@ const openCreateDialog = () => {
   createDialog.value = true
   uploadedFiles.value = []
   fileList.value = []
+  answerUploadedFiles.value = []
+  answerFileList.value = []
 }
 
 const openEditDialog = (row) => {
@@ -345,14 +395,24 @@ const openEditDialog = (row) => {
     uploadedFiles.value = []
   }
   fileList.value = uploadedFiles.value.map(url => ({ name: 'img', url }))
+
+  try {
+    answerUploadedFiles.value = JSON.parse(row.answerAttachments || '[]')
+  } catch(e) {
+    answerUploadedFiles.value = []
+  }
+  answerFileList.value = answerUploadedFiles.value.map(url => ({ name: 'img', url }))
+
   createDialog.value = true
   loadClasses()
 }
 
 const resetForm = () => {
-  form.value = { classId: '', title: '', description: '', deadline: '', attachments: '[]' }
+  form.value = { classId: '', title: '', description: '', deadline: '', attachments: '[]', answerAttachments: '[]', isAnswerPublished: 0 }
   uploadedFiles.value = []
   fileList.value = []
+  answerUploadedFiles.value = []
+  answerFileList.value = []
 }
 
 const handleUploadSuccess = (response, file, fileList) => {
@@ -372,12 +432,31 @@ const handleUploadRemove = (file, fileList) => {
   uploadedFiles.value = uploadedFiles.value.filter(u => u !== url)
 }
 
+const handleAnswerUploadSuccess = (response, file, fileList) => {
+  if (response.code === 200) {
+    answerUploadedFiles.value.push(response.data)
+  }
+}
+
+const handleAnswerVisualRemove = (file) => {
+  const url = file.response ? file.response.data : file.url
+  answerUploadedFiles.value = answerUploadedFiles.value.filter(u => u !== url)
+  answerFileList.value = answerFileList.value.filter(f => f.uid !== file.uid)
+}
+
+const handleAnswerUploadRemove = (file, fileList) => {
+  const url = file.response ? file.response.data : file.url
+  answerUploadedFiles.value = answerUploadedFiles.value.filter(u => u !== url)
+}
+
+
 const executeSave = async () => {
   if (!form.value.classId || !form.value.title) {
     ElMessage.warning('请填写班级和作业标题')
     return
   }
   form.value.attachments = JSON.stringify(uploadedFiles.value)
+  form.value.answerAttachments = JSON.stringify(answerUploadedFiles.value)
   if (isEdit.value) {
     await api.updateHomework(form.value)
     ElMessage.success('修改成功')

@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS `homework` (
     `title` VARCHAR(255) NOT NULL COMMENT '作业标题',
     `description` TEXT COMMENT '作业描述',
     `attachments` TEXT COMMENT '附件JSON',
+    `answer_attachments` TEXT COMMENT '答案附件JSON',
+    `is_answer_published` INT DEFAULT 0 COMMENT '答案是否公布 0未公布 1已公布',
     `deadline` DATETIME DEFAULT NULL COMMENT '截止时间',
     `create_by` BIGINT DEFAULT NULL COMMENT '发布人',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',

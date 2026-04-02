@@ -70,6 +70,12 @@
               <span class="user-role">{{ userStore.role === 1 ? '管理员' : '教师' }}</span>
             </div>
           </div>
+          <button class="pwd-btn" @click="pwdDialogVisible = true" title="修改密码">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </button>
           <button class="logout-btn" @click="handleLogout" title="退出登录">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -78,6 +84,25 @@
           </button>
         </div>
       </header>
+
+      <!-- 修改密码弹窗 -->
+      <el-dialog v-model="pwdDialogVisible" title="修改登录密码" width="420px" destroy-on-close>
+        <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="80px">
+          <el-form-item label="旧密码" prop="oldPassword">
+            <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+          </el-form-item>
+          <el-form-item label="新密码" prop="newPassword">
+            <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少6位" />
+          </el-form-item>
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="pwdDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="pwdLoading" @click="handleChangePassword">确认修改</el-button>
+        </template>
+      </el-dialog>
       <main class="content">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
@@ -90,9 +115,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
+import api from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -101,6 +128,51 @@ const isCollapsed = ref(false)
 const handleLogout = () => {
   userStore.logout()
   router.push('/login')
+}
+
+// 修改密码
+const pwdDialogVisible = ref(false)
+const pwdLoading = ref(false)
+const pwdFormRef = ref()
+const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+
+const validateConfirm = (rule, value, callback) => {
+  if (value !== pwdForm.newPassword) {
+    callback(new Error('两次输入的新密码不一致'))
+  } else {
+    callback()
+  }
+}
+
+const pwdRules = {
+  oldPassword: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirm, trigger: 'blur' }
+  ]
+}
+
+const handleChangePassword = async () => {
+  const valid = await pwdFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  pwdLoading.value = true
+  try {
+    await api.changePassword({
+      oldPassword: pwdForm.oldPassword,
+      newPassword: pwdForm.newPassword
+    })
+    ElMessage.success('密码修改成功，下次登录请使用新密码')
+    pwdDialogVisible.value = false
+    pwdForm.oldPassword = ''
+    pwdForm.newPassword = ''
+    pwdForm.confirmPassword = ''
+  } finally {
+    pwdLoading.value = false
+  }
 }
 </script>
 
@@ -298,5 +370,25 @@ const handleLogout = () => {
 .content {
   flex: 1;
   padding: 24px;
+}
+
+.pwd-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.pwd-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--primary-light);
+}
+
+.pwd-btn svg {
+  width: 18px;
+  height: 18px;
 }
 </style>

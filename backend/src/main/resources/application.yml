@@ -24,3 +24,7 @@ jwt:
 
 file:
   upload-path: ./uploads
+
+app:
+  h5:
+    base-url: http://192.168.1.43:5173

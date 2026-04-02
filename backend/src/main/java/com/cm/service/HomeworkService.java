@@ -83,6 +83,8 @@ public class HomeworkService {
             map.put("title", hw.getTitle());
             map.put("description", hw.getDescription());
             map.put("attachments", hw.getAttachments());
+            map.put("answerAttachments", hw.getAnswerAttachments());
+            map.put("isAnswerPublished", hw.getIsAnswerPublished() != null ? hw.getIsAnswerPublished() : 0);
             map.put("deadline", hw.getDeadline());
             map.put("createTime", hw.getCreateTime());
             ClassInfo ci = classMap.get(hw.getClassId());
@@ -257,6 +259,11 @@ public class HomeworkService {
         if (sh == null) {
             result.put("error", "您不在此次作业的提交名单中");
             return result;
+        }
+
+        // 学生端访问：如果老师没有公布答案，则屏蔽答案附件内容
+        if (hw.getIsAnswerPublished() == null || hw.getIsAnswerPublished() != 1) {
+            hw.setAnswerAttachments(null);
         }
 
         result.put("homework", hw);

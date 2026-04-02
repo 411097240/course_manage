@@ -13,6 +13,8 @@ public class Homework {
     private String title;
     private String description;
     private String attachments;
+    private String answerAttachments;
+    private Integer isAnswerPublished;
     private LocalDateTime deadline;
     private Long createBy;
     @TableField(fill = FieldFill.INSERT)

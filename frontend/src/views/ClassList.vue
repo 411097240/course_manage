@@ -27,9 +27,10 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="240">
+        <el-table-column label="操作" min-width="300">
           <template #default="{ row }">
             <el-button size="small" @click="$router.push(`/class/${row.id}/course`)">排课</el-button>
+            <el-button size="small" type="success" plain @click="$router.push(`/class/${row.id}/rollcall`)">点名记录</el-button>
             <el-button size="small" @click="openDialog(row)" v-if="userStore.isAdmin()">编辑</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.id)" v-if="userStore.isAdmin()">删除</el-button>
           </template>

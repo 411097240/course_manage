@@ -25,6 +25,18 @@ public class CommonController {
     @Value("${file.upload-path}")
     private String uploadPathConfig;
 
+    @Value("${app.h5.base-url:http://localhost:5173}")
+    private String h5BaseUrl;
+
+    @GetMapping("/config/h5Url")
+    public Map<String, Object> getH5Url() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", 200);
+        result.put("msg", "success");
+        result.put("data", h5BaseUrl);
+        return result;
+    }
+
     @PostMapping("/upload")
     public Map<String, Object> uploadFile(@RequestParam("file") MultipartFile file) {
         Map<String, Object> result = new HashMap<>();

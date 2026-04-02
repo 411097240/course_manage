@@ -57,7 +57,7 @@
         </el-table-column>
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
-            <el-button v-if="row.status === 1" size="small" type="primary" plain @click="copyHomeworkLink(row.classId)">作业链接</el-button>
+            <el-button v-if="row.status === 1" size="small" type="primary" plain @click="copyHomeworkLink(row.classId)">空间链接</el-button>
             <el-button v-if="row.status === 1 && row.classStatus === 1" size="small" type="danger" @click="handleLeave(row.classId)">出班</el-button>
           </template>
         </el-table-column>
@@ -161,10 +161,14 @@
       </div>
 
       <div class="voucher-section hw-link-section">
-        <h3 class="section-title">专属课后作业提交通道</h3>
-        <div class="hw-link-box">
-          <p>请妥善保管您的专属链接，通过手机浏览器直接访问该链接即可查看本班作业要求并提交作业解答：</p>
-          <div class="url-text">{{ generateVoucherShareLink }}</div>
+        <h3 class="section-title">专属班级空间</h3>
+        <div class="hw-link-box" style="display:flex; align-items:center; gap: 20px;">
+          <div style="flex:1;">
+            <p>请妥善保管您的专属链接，使用手机扫描右侧二维码，即可进入您的专属班级空间，查看本班作业及考勤等信息，并直接提交您的解答作业。</p>
+          </div>
+          <div v-if="qrCodeUrl" style="border:1px solid #eee; padding:5px; border-radius:8px; background:white;">
+            <img :src="qrCodeUrl" alt="二维码" style="width:120px;height:120px;display:block;" />
+          </div>
         </div>
       </div>
       
@@ -176,9 +180,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import QRCode from 'qrcode'
 import api from '../api'
 
 const route = useRoute()
@@ -189,6 +194,9 @@ const schedule = ref([])
 const classLoading = ref(false)
 const scheduleLoading = ref(false)
 const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+const h5BaseUrl = ref(window.location.origin)
+const qrCodeUrl = ref('')
 
 const selectedDate = ref(new Date().toISOString().split('T')[0])
 
@@ -204,7 +212,19 @@ const printSchedule = computed(() => {
 
 const generateVoucherShareLink = computed(() => {
   if (!student.value || !printClassId.value) return ''
-  return `${window.location.origin}/h5/homework?token=${student.value.accessToken}&classId=${printClassId.value}`
+  return `${h5BaseUrl.value}/h5/homework?token=${student.value.accessToken}&classId=${printClassId.value}`
+})
+
+watch(generateVoucherShareLink, async (newVal) => {
+  if (newVal) {
+    try {
+      qrCodeUrl.value = await QRCode.toDataURL(newVal, { width: 150, margin: 1, color: { dark: '#111111', light: '#ffffff' } })
+    } catch (err) {
+      console.error(err)
+    }
+  } else {
+    qrCodeUrl.value = ''
+  }
 })
 
 const formatTime = (t) => {
@@ -242,6 +262,17 @@ const getScheduleByDay = (day) => {
 }
 
 const loadData = async () => {
+  try {
+    const configRes = await api.getConfigH5Url()
+    if (configRes.data) {
+      let url = configRes.data
+      if (url.includes('localhost') || url.includes('127.0.0.1')) {
+        url = url.replace(/localhost|127\.0\.0\.1/, window.location.hostname)
+      }
+      h5BaseUrl.value = url
+    }
+  } catch(e) { console.error('Failed to get h5 url config', e) }
+
   const res = await api.getStudentById(studentId)
   student.value = res.data
 
@@ -267,11 +298,11 @@ const copyHomeworkLink = (classId) => {
     ElMessage.error('无法获取学生Token信息')
     return
   }
-  const link = `${window.location.origin}/h5/homework?token=${student.value.accessToken}&classId=${classId}`
+  const link = `${h5BaseUrl.value}/h5/homework?token=${student.value.accessToken}&classId=${classId}`
   
   if (navigator.clipboard) {
     navigator.clipboard.writeText(link).then(() => {
-      ElMessage.success('已成功复制该学生的专属作业链接！')
+      ElMessage.success('已成功复制该学生的专属班级空间链接！')
     }).catch(() => {
       fallbackCopy(link)
     })
@@ -289,7 +320,7 @@ const fallbackCopy = (text) => {
   textArea.select()
   try {
     document.execCommand('copy')
-    ElMessage.success('已成功复制该学生的专属作业链接！')
+    ElMessage.success('已成功复制该学生的专属班级空间链接！')
   } catch (err) {
     ElMessage.error('复制失败，请手动组合链接')
   }
@@ -350,7 +381,6 @@ const executePrint = () => {
             .voucher-table th { background-color: #f1f1f1; font-weight: bold; }
             .hw-link-box { background: #fdfdfd; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; margin-top: 10px; }
             .hw-link-box p { color: #555; margin: 0 0 10px 0; font-size: 14px; }
-            .url-text { word-break: break-all; font-family: monospace; font-size: 14px; color: #6366f1; background: #eef2ff; padding: 10px; border-radius: 6px; }
             .voucher-footer { margin-top: 50px; text-align: right; font-size: 13px; color: #888; border-top: 1px dashed #ccc; padding-top: 10px; }
           </style>
         </head>

@@ -43,6 +43,8 @@ export default {
   // 认证
   login: (data) => request.post('/auth/login', data),
   getUserInfo: () => request.get('/auth/info'),
+  getConfigH5Url: () => request.get('/common/config/h5Url'),
+  changePassword: (data) => request.post('/auth/change-password', data),
 
   // 班级
   getClassList: (params) => request.get('/class/list', { params }),
@@ -77,6 +79,7 @@ export default {
   getTeachers: () => request.get('/user-class/teachers'),
   createTeacher: (data) => request.post('/user-class/teacher', data),
   resetPassword: (data) => request.post('/user-class/reset-password', data),
+  toggleTeacherStatus: (data) => request.post('/user-class/toggle-status', data),
 
   // 文件上传
   uploadFile: (file) => {
@@ -98,5 +101,16 @@ export default {
   // H5 作业提交流程 (免密)
   getH5HomeworkList: (token, classId) => request.get('/h5/homework/list', { params: { token, classId } }),
   getH5HomeworkDetail: (homeworkId, token) => request.get('/h5/homework/detail', { params: { homeworkId, token } }),
-  submitH5Homework: (data, token) => request.post('/h5/homework/submit', data, { params: { token } })
+  submitH5Homework: (data, token) => request.post('/h5/homework/submit', data, { params: { token } }),
+
+  // 点名管理
+  getRollcallStudents: (classId, date) => request.get('/rollcall/students', { params: { classId, date } }),
+  submitRollcall: (data) => request.post('/rollcall/submit', data),
+  getRollcallRecords: (params) => request.get('/rollcall/page', { params }),
+  getRollcallDetail: (recordId) => request.get('/rollcall/detail', { params: { recordId } }),
+
+  // H5 班级空间
+  getH5Schedule: (token, classId) => request.get('/h5/space/schedule', { params: { token, classId } }),
+  getH5Attendance: (token, classId) => request.get('/h5/space/attendance', { params: { token, classId } }),
 }
+

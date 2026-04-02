@@ -12,7 +12,31 @@ const routes = [
     path: '/h5/homework',
     name: 'H5Homework',
     component: () => import('../views/H5Homework.vue'),
-    meta: { title: '在线作业', requiresAuth: false }
+    meta: { title: '班级空间', requiresAuth: false }
+  },
+  {
+    path: '/h5/login',
+    name: 'H5Login',
+    component: () => import('../views/H5Login.vue'),
+    meta: { title: '教师移动端登录', requiresAuth: false }
+  },
+  {
+    path: '/h5/classes',
+    name: 'H5ClassSelect',
+    component: () => import('../views/H5ClassSelect.vue'),
+    meta: { title: '选择班级', requiresAuth: true }
+  },
+  {
+    path: '/h5/rollcall/:classId',
+    name: 'H5Rollcall',
+    component: () => import('../views/H5Rollcall.vue'),
+    meta: { title: '课堂点名', requiresAuth: true }
+  },
+  {
+    path: '/h5/history/:classId',
+    name: 'H5RollcallHistory',
+    component: () => import('../views/H5RollcallHistory.vue'),
+    meta: { title: '历史点名', requiresAuth: true }
   },
   {
     path: '/',
@@ -36,6 +60,12 @@ const routes = [
         name: 'CourseList',
         component: () => import('../views/CourseList.vue'),
         meta: { title: '课程排课' }
+      },
+      {
+        path: 'class/:id/rollcall',
+        name: 'RollcallList',
+        component: () => import('../views/RollcallList.vue'),
+        meta: { title: '点名记录' }
       },
       {
         path: 'student',
@@ -72,10 +102,18 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  if (to.meta.requiresAuth === false) {
+  if (to.path === '/login' && token) {
+    next('/')
+  } else if (to.path === '/h5/login' && token) {
+    next(to.query.redirect || '/h5/classes')
+  } else if (to.meta.requiresAuth === false) {
     next()
   } else if (!token) {
-    next('/login')
+    if (to.path.startsWith('/h5/')) {
+      next('/h5/login?redirect=' + encodeURIComponent(to.fullPath))
+    } else {
+      next('/login')
+    }
   } else {
     next()
   }

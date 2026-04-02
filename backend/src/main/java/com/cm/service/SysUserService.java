@@ -56,8 +56,7 @@ public class SysUserService {
         return userMapper.selectList(
                 new LambdaQueryWrapper<SysUser>()
                         .eq(SysUser::getRole, 2)
-                        .eq(SysUser::getStatus, 1)
-                        .select(SysUser::getId, SysUser::getUsername, SysUser::getRealName));
+                        .select(SysUser::getId, SysUser::getUsername, SysUser::getRealName, SysUser::getStatus));
     }
 
     /**
@@ -85,5 +84,39 @@ public class SysUserService {
         user.setId(userId);
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
+    }
+
+    /**
+     * 切换教师账号启用/停用状态
+     */
+    public void toggleTeacherStatus(Long userId) {
+        SysUser user = userMapper.selectById(userId);
+        if (user != null && user.getRole() == 2) {
+            SysUser update = new SysUser();
+            update.setId(userId);
+            update.setStatus(user.getStatus() == 1 ? 0 : 1);
+            userMapper.updateById(update);
+        }
+    }
+
+    /**
+     * 用户修改自己的密码
+     */
+    public String changePassword(Long userId, String oldPassword, String newPassword) {
+        if (newPassword == null || newPassword.length() < 6) {
+            return "新密码长度不能少于6位";
+        }
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            return "用户不存在";
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return "旧密码不正确";
+        }
+        SysUser update = new SysUser();
+        update.setId(userId);
+        update.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(update);
+        return null;
     }
 }

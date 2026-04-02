@@ -13,16 +13,27 @@
           暂无教师
         </div>
         <div v-for="t in teachers" :key="t.id"
-             :class="['teacher-item', { selected: selectedTeacherId === t.id }]"
+             :class="['teacher-item', { selected: selectedTeacherId === t.id, disabled: t.status === 0 }]"
              @click="selectTeacher(t)">
-          <div class="t-avatar">{{ t.realName?.charAt(0) }}</div>
+          <div :class="['t-avatar', { 'avatar-disabled': t.status === 0 }]">{{ t.realName?.charAt(0) }}</div>
           <div style="flex:1;min-width:0">
-            <div class="t-name">{{ t.realName }}</div>
+            <div class="t-name">
+              {{ t.realName }}
+              <span v-if="t.status === 0" class="disabled-tag">已停用</span>
+            </div>
             <div class="t-username">@{{ t.username }}</div>
           </div>
           <el-button size="small" type="warning" link title="重置密码"
                      @click.stop="handleResetPassword(t)" style="padding:4px">
             🔑
+          </el-button>
+          <el-button v-if="t.status === 1" size="small" type="danger" link title="停用"
+                     @click.stop="handleToggleStatus(t)" style="padding:4px">
+            🚫
+          </el-button>
+          <el-button v-else size="small" type="success" link title="启用"
+                     @click.stop="handleToggleStatus(t)" style="padding:4px">
+            ✅
           </el-button>
         </div>
       </div>
@@ -186,6 +197,25 @@ const handleResetPassword = (teacher) => {
   }).catch(() => {})
 }
 
+const handleToggleStatus = (teacher) => {
+  const action = teacher.status === 1 ? '停用' : '启用'
+  ElMessageBox.confirm(
+    `确定${action}教师 ${teacher.realName} 的账号吗？${teacher.status === 1 ? '停用后该教师将无法登录系统。' : ''}`,
+    `${action}账号`,
+    { type: 'warning', confirmButtonText: `确定${action}`, cancelButtonText: '取消' }
+  ).then(async () => {
+    await api.toggleTeacherStatus({ userId: teacher.id })
+    ElMessage.success(`已${action} ${teacher.realName} 的账号`)
+    loadTeachers()
+    // 如果停用的是当前选中的教师，清空右侧面板
+    if (teacher.id === selectedTeacherId.value && teacher.status === 1) {
+      selectedTeacherId.value = null
+      selectedTeacherName.value = ''
+      assignedClasses.value = []
+    }
+  }).catch(() => {})
+}
+
 onMounted(loadTeachers)
 </script>
 
@@ -243,5 +273,23 @@ onMounted(loadTeachers)
 .t-username {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.teacher-item.disabled {
+  opacity: 0.55;
+}
+
+.avatar-disabled {
+  background: linear-gradient(135deg, #9ca3af, #d1d5db) !important;
+}
+
+.disabled-tag {
+  font-size: 11px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  font-weight: 500;
 }
 </style>
