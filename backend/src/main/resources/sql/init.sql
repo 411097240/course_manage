@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS `student` (
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_student_no` (`student_no`)
+    UNIQUE KEY `uk_student_no` (`student_no`),
+    KEY `idx_access_token` (`access_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生表';
 
 -- 学生-班级关联表
@@ -105,7 +106,8 @@ CREATE TABLE IF NOT EXISTS `homework` (
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    KEY `idx_class_id` (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='作业主体表';
 
 -- 学生作业提交表
@@ -122,8 +124,34 @@ CREATE TABLE IF NOT EXISTS `student_homework` (
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    KEY `idx_homework_id` (`homework_id`),
+    KEY `idx_student_id` (`student_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生作业提交状态记录表';
+
+-- 点名记录表
+CREATE TABLE IF NOT EXISTS `attendance_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `class_id` BIGINT NOT NULL COMMENT '班级ID',
+    `teacher_id` BIGINT DEFAULT NULL COMMENT '点名教师ID',
+    `record_date` DATE NOT NULL COMMENT '点名日期',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_class_date` (`class_id`, `record_date`),
+    KEY `idx_class_id` (`class_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='点名记录表';
+
+-- 点名明细表
+CREATE TABLE IF NOT EXISTS `attendance_detail` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `record_id` BIGINT NOT NULL COMMENT '点名记录ID',
+    `student_id` BIGINT NOT NULL COMMENT '学生ID',
+    `status` TINYINT NOT NULL COMMENT '1出勤 2迟到 3请假 4缺勤',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_record_id` (`record_id`),
+    KEY `idx_student_id` (`student_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='点名明细表';
 
 -- 插入默认管理员 (密码: admin123, BCrypt加密)
 INSERT INTO `sys_user` (`username`, `password`, `real_name`, `role`, `status`)
