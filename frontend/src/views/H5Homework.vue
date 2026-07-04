@@ -81,7 +81,13 @@
               :key="i"
               class="att-record-item"
             >
-              <span class="att-date">{{ rec.recordDate }}</span>
+              <div class="att-record-info">
+                <div class="att-class-name">{{ rec.className }}</div>
+                <div class="att-meta">
+                  <span class="att-date">{{ rec.recordDate }}</span>
+                  <span v-if="rec.startTime && rec.endTime" class="att-time">{{ rec.startTime }} - {{ rec.endTime }}</span>
+                </div>
+              </div>
               <span :class="['att-status-badge', 'att-s-' + rec.status]">
                 {{ attendanceStatusText(rec.status) }}
               </span>
@@ -653,15 +659,40 @@ onMounted(() => {
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid #f5f5f5;
+  gap: 12px;
 }
 
 .att-record-item:last-child {
   border-bottom: none;
 }
 
+.att-record-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.att-class-name {
+  font-size: 15px;
+  color: #111;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.att-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .att-date {
-  font-size: 14px;
-  color: #333;
+  font-size: 13px;
+  color: #666;
+}
+
+.att-time {
+  font-size: 13px;
+  color: #409EFF;
   font-weight: 500;
 }
 

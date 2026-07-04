@@ -5,73 +5,53 @@
       <div style="font-size: 15px; font-weight: 500; color: #444;" @click="logout">退出登录</div>
     </div>
     
-    <div v-loading="loading && current === 1" style="padding-top: 15px;">
-      <div v-if="classes.length === 0 && !loading" style="padding: 30px; text-align: center; color: #999;">
-        暂无管理的班级
+    <div v-loading="loading" style="padding-top: 15px;">
+      <div v-if="courses.length === 0 && !loading" style="padding: 30px; text-align: center; color: #999;">
+        今日暂无排课
       </div>
-      <div 
-        v-infinite-scroll="loadMore"
-        :infinite-scroll-disabled="loading || noMore"
-        :infinite-scroll-distance="10"
-        :infinite-scroll-immediate="false"
-        style="height: calc(100vh - 65px); overflow-y: auto; padding-bottom: 20px;"
-      >
-        <div v-for="c in classes" :key="c.id" class="class-card">
-          <div class="class-info" @click="goToRollcall(c.id)" style="flex:1">
-            <div class="class-title">{{ c.className }}</div>
-            <div class="class-code">{{ c.classCode }}</div>
+      <div style="height: calc(100vh - 65px); overflow-y: auto; padding-bottom: 20px;">
+        <div v-for="item in courses" :key="item.courseId" class="class-card">
+          <div class="class-info" @click="goToRollcall(item)" style="flex:1">
+            <div class="class-title">{{ item.className }}</div>
+            <div class="class-code">{{ item.classCode }}</div>
           </div>
-          <div class="class-actions" style="display:flex;gap:10px;">
-            <el-button size="small" type="primary" plain @click="goToRollcall(c.id)">点名</el-button>
-            <el-button size="small" type="info" plain @click="goToHistory(c.id)">记录</el-button>
+          <div class="class-time">{{ item.startTime }} - {{ item.endTime }}</div>
+          <div class="class-actions">
+            <el-button size="small" type="primary" plain @click="goToRollcall(item)">点名</el-button>
+            <el-button size="small" type="info" plain @click="goToHistory(item.classId)">记录</el-button>
           </div>
         </div>
-        <div v-if="loading && current > 1" style="text-align: center; padding: 10px; color: #999; font-size: 13px;">加载中...</div>
-        <div v-if="noMore && classes.length > 0" style="text-align: center; padding: 10px; color: #999; font-size: 13px;">没有更多班级了</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import api from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
-const classes = ref([])
+const courses = ref([])
 const loading = ref(false)
-const current = ref(1)
-const size = ref(20)
-const total = ref(0)
 
-const noMore = computed(() => classes.value.length >= total.value && total.value > 0)
-
-const loadMore = () => {
-  if (loading.value || noMore.value) return
-  current.value += 1
-  loadData(true)
-}
-
-const loadData = async (isAppend = false) => {
+const loadData = async () => {
   loading.value = true
   try {
-    const res = await api.getClassList({ current: current.value, size: size.value })
-    if (isAppend) {
-      classes.value.push(...(res.data.records || []))
-    } else {
-      classes.value = res.data.records || []
-    }
-    total.value = Number(res.data.total)
+    const res = await api.getTodayRollcallCourses()
+    courses.value = res.data || []
   } finally {
     loading.value = false
   }
 }
 
-const goToRollcall = (classId) => {
-  router.push(`/h5/rollcall/${classId}`)
+const goToRollcall = (item) => {
+  router.push({
+    path: `/h5/rollcall/${item.classId}`,
+    query: { courseId: item.courseId, startTime: item.startTime, endTime: item.endTime }
+  })
 }
 
 const goToHistory = (classId) => {
@@ -107,11 +87,13 @@ onMounted(loadData)
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   position: relative;
 }
 .class-info {
   cursor: pointer;
+  min-width: 0;
 }
 .class-title {
   font-size: 19px;
@@ -123,5 +105,17 @@ onMounted(loadData)
 .class-code {
   color: #999;
   font-size: 14px;
+}
+.class-time {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #409EFF;
+  white-space: nowrap;
+}
+.class-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
 }
 </style>

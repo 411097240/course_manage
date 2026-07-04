@@ -8,8 +8,9 @@
     <div class="tip" v-if="className">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <span>班级：{{ className }}</span>
-        <el-tag v-if="hasExisting" type="warning" effect="plain" size="small">今天已点名 (编辑中)</el-tag>
+        <el-tag v-if="hasExisting" type="warning" effect="plain" size="small">已点名 (编辑中)</el-tag>
       </div>
+      <div v-if="timeSlot">上课时间：{{ timeSlot }}</div>
       <div>日期：{{ form.recordDate }}</div>
     </div>
 
@@ -50,12 +51,16 @@ import api from '../api'
 const route = useRoute()
 const router = useRouter()
 const classId = route.params.classId
+const courseId = route.query.courseId
+const startTime = route.query.startTime
+const endTime = route.query.endTime
 
 const loading = ref(false)
 const submitting = ref(false)
 const students = ref([])
 const details = ref([])
 const className = ref('')
+const timeSlot = ref('')
 const hasExisting = ref(false)
 
 const form = ref({
@@ -68,7 +73,11 @@ const loadData = async () => {
     const classRes = await api.getClassById(classId)
     className.value = classRes.data.className
 
-    const res = await api.getRollcallStudents(classId, form.value.recordDate)
+    if (startTime && endTime) {
+      timeSlot.value = `${startTime} - ${endTime}`
+    }
+
+    const res = await api.getRollcallStudents(classId, form.value.recordDate, courseId || undefined)
     students.value = res.data.students || []
     hasExisting.value = res.data.hasExisting || false
     details.value = students.value.map(s => ({
@@ -84,7 +93,7 @@ const submit = async () => {
   submitting.value = true
   try {
     await api.submitRollcall({
-      record: { classId, recordDate: form.value.recordDate },
+      record: { classId, courseId: courseId ? Number(courseId) : undefined, recordDate: form.value.recordDate },
       details: details.value
     })
     ElMessage.success(hasExisting.value ? '点名记录已更新' : '点名提交成功')
@@ -101,7 +110,12 @@ const submit = async () => {
 onMounted(() => {
   if (!classId) {
     ElMessage.error('缺少 classId 参数')
-    router.push('/class')
+    router.push('/h5/classes')
+    return
+  }
+  if (!courseId) {
+    ElMessage.error('请从今日排课列表进入点名')
+    router.push('/h5/classes')
     return
   }
   loadData()

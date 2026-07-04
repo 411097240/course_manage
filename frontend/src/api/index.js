@@ -105,7 +105,8 @@ export default {
   submitH5Homework: (data, token) => request.post('/h5/homework/submit', data, { params: { token } }),
 
   // 点名管理
-  getRollcallStudents: (classId, date) => request.get('/rollcall/students', { params: { classId, date } }),
+  getTodayRollcallCourses: () => request.get('/rollcall/today-courses'),
+  getRollcallStudents: (classId, date, courseId) => request.get('/rollcall/students', { params: { classId, date, courseId } }),
   submitRollcall: (data) => request.post('/rollcall/submit', data),
   getRollcallRecords: (params) => request.get('/rollcall/page', { params }),
   getRollcallDetail: (recordId) => request.get('/rollcall/detail', { params: { recordId } }),

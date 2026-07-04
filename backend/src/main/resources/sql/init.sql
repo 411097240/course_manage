@@ -133,11 +133,12 @@ CREATE TABLE IF NOT EXISTS `student_homework` (
 CREATE TABLE IF NOT EXISTS `attendance_record` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `class_id` BIGINT NOT NULL COMMENT '班级ID',
+    `course_id` BIGINT DEFAULT NULL COMMENT '排课ID',
     `teacher_id` BIGINT DEFAULT NULL COMMENT '点名教师ID',
     `record_date` DATE NOT NULL COMMENT '点名日期',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_class_date` (`class_id`, `record_date`),
+    UNIQUE KEY `uk_course_id` (`course_id`),
     KEY `idx_class_id` (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='点名记录表';
 

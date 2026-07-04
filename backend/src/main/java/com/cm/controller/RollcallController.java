@@ -21,12 +21,23 @@ public class RollcallController {
     @Autowired
     private RollcallService rollcallService;
 
+    @GetMapping("/today-courses")
+    public Map<String, Object> todayCourses() {
+        List<Map<String, Object>> result = rollcallService.listTodayCourses();
+        Map<String, Object> map = new HashMap<>();
+        map.put("code", 200);
+        map.put("msg", "success");
+        map.put("data", result);
+        return map;
+    }
+
     @GetMapping("/students")
     public Map<String, Object> getStudents(
             @RequestParam Long classId,
-            @RequestParam(required = false) String date) {
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) Long courseId) {
         LocalDate rollcallDate = date != null && !date.isEmpty() ? LocalDate.parse(date) : LocalDate.now();
-        Map<String, Object> result = rollcallService.getRollcallFormInfo(classId, rollcallDate);
+        Map<String, Object> result = rollcallService.getRollcallFormInfo(classId, rollcallDate, courseId);
         Map<String, Object> map = new HashMap<>();
         map.put("code", 200);
         map.put("msg", "success");

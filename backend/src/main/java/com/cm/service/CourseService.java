@@ -9,7 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CourseService {
@@ -26,6 +29,25 @@ public class CourseService {
                         .eq(Course::getClassId, classId)
                         .orderByAsc(Course::getCourseDate)
                         .orderByAsc(Course::getStartTime));
+    }
+
+    public List<Course> listByClassIdsAndDate(List<Long> classIds, LocalDate date) {
+        if (classIds == null || classIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return courseMapper.selectList(
+                new LambdaQueryWrapper<Course>()
+                        .in(Course::getClassId, classIds)
+                        .eq(Course::getCourseDate, date)
+                        .orderByAsc(Course::getStartTime));
+    }
+
+    public Map<Long, Course> mapByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return courseMapper.selectBatchIds(ids).stream()
+                .collect(Collectors.toMap(Course::getId, c -> c));
     }
 
     public void save(Course course) {
