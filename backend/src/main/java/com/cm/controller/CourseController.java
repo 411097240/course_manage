@@ -1,6 +1,7 @@
 package com.cm.controller;
 
 import com.cm.common.Result;
+import com.cm.dto.CourseBatchDTO;
 import com.cm.entity.Course;
 import com.cm.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,14 +21,32 @@ public class CourseController {
 
     @PostMapping
     public Result<?> save(@RequestBody Course course) {
-        courseService.save(course);
-        return Result.ok();
+        try {
+            courseService.save(course);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/batch")
+    public Result<?> saveBatch(@RequestBody CourseBatchDTO dto) {
+        try {
+            courseService.saveBatch(dto);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
     }
 
     @PutMapping
     public Result<?> update(@RequestBody Course course) {
-        courseService.update(course);
-        return Result.ok();
+        try {
+            courseService.update(course);
+            return Result.ok();
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")

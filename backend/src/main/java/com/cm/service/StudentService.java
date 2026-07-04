@@ -266,7 +266,7 @@ public class StudentService {
         List<Course> courses = courseMapper.selectList(
                 new LambdaQueryWrapper<Course>()
                         .in(Course::getClassId, activeClassIds)
-                        .orderByAsc(Course::getDayOfWeek)
+                        .orderByAsc(Course::getCourseDate)
                         .orderByAsc(Course::getStartTime));
 
         List<Map<String, Object>> result = new ArrayList<>();
@@ -274,7 +274,7 @@ public class StudentService {
             Map<String, Object> item = new HashMap<>();
             item.put("courseId", course.getId());
             item.put("teacherName", course.getTeacherName());
-            item.put("dayOfWeek", course.getDayOfWeek());
+            item.put("courseDate", course.getCourseDate());
             item.put("startTime", course.getStartTime());
             item.put("endTime", course.getEndTime());
             item.put("location", course.getLocation());

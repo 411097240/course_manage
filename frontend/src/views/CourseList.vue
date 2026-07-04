@@ -14,31 +14,12 @@
       <el-button type="primary" @click="openDialog()">+ 新增课程</el-button>
     </div>
 
-    <!-- 周视图 -->
-    <div class="page-card" style="margin-bottom:24px">
-      <h3 style="margin-bottom:16px;color:var(--text-primary)">📅 周课程表</h3>
-      <div class="week-grid">
-        <div class="week-col" v-for="day in 7" :key="day">
-          <div class="week-header">{{ dayNames[day - 1] }}</div>
-          <div class="week-body">
-            <div v-for="course in getCoursesByDay(day)" :key="course.id" class="week-course-card"
-                 @click="openDialog(course)">
-              <div class="wc-time">{{ course.startTime }} - {{ course.endTime }}</div>
-              <div class="wc-teacher" v-if="course.teacherName">👨‍🏫 {{ course.teacherName }}</div>
-              <div class="wc-location" v-if="course.location">📍 {{ course.location }}</div>
-            </div>
-            <div v-if="getCoursesByDay(day).length === 0" class="week-empty">暂无</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 列表视图 -->
     <div class="page-card">
       <h3 style="margin-bottom:16px;color:var(--text-primary)">📋 课程列表</h3>
       <el-table :data="courses" v-loading="loading">
-        <el-table-column label="星期" width="100">
-          <template #default="{ row }">{{ dayNames[row.dayOfWeek - 1] }}</template>
+        <el-table-column label="日期" width="160">
+          <template #default="{ row }">{{ formatDateLabel(row.courseDate) }}</template>
         </el-table-column>
         <el-table-column prop="teacherName" label="授课教师" width="120" />
         <el-table-column label="时间" width="160">
@@ -59,10 +40,25 @@
         <el-form-item label="授课教师">
           <el-input v-model="form.teacherName" placeholder="请输入授课教师" />
         </el-form-item>
-        <el-form-item label="星期" prop="dayOfWeek">
-          <el-select v-model="form.dayOfWeek" placeholder="请选择星期">
-            <el-option v-for="(name, i) in dayNames" :key="i" :label="name" :value="i + 1" />
-          </el-select>
+        <el-form-item v-if="editId" label="上课日期" prop="courseDate">
+          <el-date-picker
+            v-model="form.courseDate"
+            type="date"
+            placeholder="请选择日期"
+            value-format="YYYY-MM-DD"
+            :disabled-date="disabledDate"
+            style="width:100%"
+          />
+        </el-form-item>
+        <el-form-item v-else label="上课日期" prop="courseDates">
+          <el-date-picker
+            v-model="form.courseDates"
+            type="dates"
+            placeholder="请选择一个或多个日期"
+            value-format="YYYY-MM-DD"
+            :disabled-date="disabledDate"
+            style="width:100%"
+          />
         </el-form-item>
         <el-form-item label="开始时间" prop="startTime">
           <el-time-picker v-model="form.startTime" format="HH:mm" value-format="HH:mm" placeholder="开始" />
@@ -93,17 +89,50 @@ const classId = Number(route.params.id)
 const classInfo = ref({})
 const courses = ref([])
 const loading = ref(false)
-const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
 const dialogVisible = ref(false)
 const editId = ref(null)
 const submitLoading = ref(false)
 const formRef = ref()
-const form = reactive({ teacherName: '', dayOfWeek: null, startTime: '', endTime: '', location: '' })
+const form = reactive({
+  teacherName: '',
+  courseDate: '',
+  courseDates: [],
+  startTime: '',
+  endTime: '',
+  location: ''
+})
+
 const rules = {
-  dayOfWeek: [{ required: true, message: '请选择星期', trigger: 'change' }],
+  courseDate: [{ required: true, message: '请选择上课日期', trigger: 'change' }],
+  courseDates: [{
+    validator: (_, value, callback) => {
+      if (!value || value.length === 0) callback(new Error('请至少选择一个上课日期'))
+      else callback()
+    },
+    trigger: 'change'
+  }],
   startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
   endTime: [{ required: true, message: '请选择结束时间', trigger: 'change' }]
+}
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  const day = dayNames[d.getDay()]
+  return `${dateStr} (${day})`
+}
+
+const disabledDate = (date) => {
+  const { startDate, endDate } = classInfo.value
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const dateStr = `${y}-${m}-${d}`
+  if (startDate && dateStr < startDate) return true
+  if (endDate && dateStr > endDate) return true
+  return false
 }
 
 const loadData = async () => {
@@ -120,12 +149,11 @@ const loadData = async () => {
   }
 }
 
-const getCoursesByDay = (day) => courses.value.filter(c => c.dayOfWeek === day)
-
 const openDialog = (row) => {
   editId.value = row ? row.id : null
   form.teacherName = row ? row.teacherName : ''
-  form.dayOfWeek = row ? row.dayOfWeek : null
+  form.courseDate = row ? row.courseDate : ''
+  form.courseDates = []
   form.startTime = row ? row.startTime : ''
   form.endTime = row ? row.endTime : ''
   form.location = row ? row.location : ''
@@ -138,11 +166,26 @@ const handleSubmit = async () => {
   submitLoading.value = true
   try {
     if (editId.value) {
-      await api.updateCourse({ id: editId.value, classId, ...form })
+      await api.updateCourse({
+        id: editId.value,
+        classId,
+        teacherName: form.teacherName,
+        courseDate: form.courseDate,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        location: form.location
+      })
       ElMessage.success('修改成功')
     } else {
-      await api.addCourse({ classId, ...form })
-      ElMessage.success('添加成功')
+      await api.addCourseBatch({
+        classId,
+        courseDates: form.courseDates,
+        teacherName: form.teacherName,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        location: form.location
+      })
+      ElMessage.success(`成功添加 ${form.courseDates.length} 条课程`)
     }
     dialogVisible.value = false
     loadData()
@@ -161,72 +204,3 @@ const handleDelete = (id) => {
 
 onMounted(loadData)
 </script>
-
-<style scoped>
-.week-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-}
-
-.week-col {
-  min-width: 0;
-}
-
-.week-header {
-  text-align: center;
-  padding: 10px 0;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--primary-light);
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: 8px 8px 0 0;
-}
-
-.week-body {
-  min-height: 120px;
-  padding: 8px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.week-course-card {
-  padding: 8px 10px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.week-course-card:hover {
-  background: rgba(99, 102, 241, 0.18);
-  transform: translateY(-1px);
-}
-
-.wc-name {
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.wc-time {
-  font-size: 11px;
-  color: var(--primary-light);
-}
-
-.wc-teacher, .wc-location {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.week-empty {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 12px;
-  padding: 20px 0;
-}
-</style>

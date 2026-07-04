@@ -56,6 +56,7 @@ export default {
   // 课程
   getCourseList: (classId) => request.get('/course/list', { params: { classId } }),
   addCourse: (data) => request.post('/course', data),
+  addCourseBatch: (data) => request.post('/course/batch', data),
   updateCourse: (data) => request.put('/course', data),
   deleteCourse: (id) => request.delete(`/course/${id}`),
 

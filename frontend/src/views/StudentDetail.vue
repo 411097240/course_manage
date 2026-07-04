@@ -69,21 +69,16 @@
         <h3 style="color:var(--text-primary)">📅 课程表检索</h3>
         <el-date-picker v-model="selectedDate" type="date" placeholder="选择日期查看课表" value-format="YYYY-MM-DD" :clearable="false" />
       </div>
-      <div v-if="schedule.length === 0 && !scheduleLoading" style="text-align:center;padding:40px;color:var(--text-muted)">
-        暂无课程数据
+      <div v-if="scheduleLoading" style="text-align:center;padding:40px;color:var(--text-muted)">加载中...</div>
+      <div v-else-if="dailySchedule.length === 0" style="text-align:center;padding:40px;color:var(--text-muted)">
+        该日期暂无课程
       </div>
-      <div v-else class="week-grid">
-        <div class="week-col" v-for="day in 7" :key="day">
-          <div class="week-header">{{ dayNames[day - 1] }}</div>
-          <div class="week-body">
-            <div v-for="course in getScheduleByDay(day)" :key="course.courseId" class="week-course-card">
-              <div class="wc-time">{{ course.startTime }} - {{ course.endTime }}</div>
-              <div class="wc-teacher" v-if="course.teacherName">👨‍🏫 {{ course.teacherName }}</div>
-              <div class="wc-location" v-if="course.location">📍 {{ course.location }}</div>
-              <div class="wc-class">{{ course.className }}</div>
-            </div>
-            <div v-if="getScheduleByDay(day).length === 0" class="week-empty">暂无</div>
-          </div>
+      <div v-else class="daily-schedule">
+        <div v-for="course in dailySchedule" :key="course.courseId" class="week-course-card">
+          <div class="wc-time">{{ course.startTime }} - {{ course.endTime }}</div>
+          <div class="wc-teacher" v-if="course.teacherName">👨‍🏫 {{ course.teacherName }}</div>
+          <div class="wc-location" v-if="course.location">📍 {{ course.location }}</div>
+          <div class="wc-class">{{ course.className }}</div>
         </div>
       </div>
     </div>
@@ -138,11 +133,11 @@
       </div>
 
       <div class="voucher-section" v-if="printSchedule.length">
-        <h3 class="section-title">固定课程排期</h3>
+        <h3 class="section-title">课程排期</h3>
         <table class="voucher-table">
           <thead>
             <tr>
-              <th>星期</th>
+              <th>日期</th>
               <th>时间</th>
               <th>授课教师</th>
               <th>上课地点</th>
@@ -150,7 +145,7 @@
           </thead>
           <tbody>
             <tr v-for="course in printSchedule" :key="course.courseId">
-              <td>{{ dayNames[course.dayOfWeek - 1] }}</td>
+              <td>{{ formatDateLabel(course.courseDate) }}</td>
               <td>{{ course.startTime }} - {{ course.endTime }}</td>
               <td>{{ course.teacherName || '-' }}</td>
               <td>{{ course.location || '-' }}</td>
@@ -192,12 +187,22 @@ const classes = ref([])
 const schedule = ref([])
 const classLoading = ref(false)
 const scheduleLoading = ref(false)
-const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
 const h5BaseUrl = ref(window.location.origin)
 const qrCodeUrl = ref('')
 
 const selectedDate = ref(new Date().toISOString().split('T')[0])
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  return `${dateStr} (${dayNames[d.getDay()]})`
+}
+
+const dailySchedule = computed(() => {
+  return schedule.value.filter(c => c.courseDate === selectedDate.value)
+})
 
 // 打印专用变量
 const printDialogVisible = ref(false)
@@ -206,7 +211,9 @@ const activeClasses = computed(() => classes.value.filter(c => c.status === 1 &&
 const selectedPrintClassData = computed(() => activeClasses.value.find(c => c.classId === printClassId.value))
 const printSchedule = computed(() => {
   if (!printClassId.value) return []
-  return schedule.value.filter(c => c.classId === printClassId.value)
+  return schedule.value
+    .filter(c => c.classId === printClassId.value)
+    .sort((a, b) => (a.courseDate || '').localeCompare(b.courseDate || ''))
 })
 
 const generateVoucherShareLink = computed(() => {
@@ -229,35 +236,6 @@ watch(generateVoucherShareLink, async (newVal) => {
 const formatTime = (t) => {
   if (!t) return '-'
   return t.replace('T', ' ').substring(0, 16)
-}
-
-const getScheduleByDay = (day) => {
-  return schedule.value.filter(c => {
-    // 1. 匹配星期
-    if (c.dayOfWeek !== day) return false
-    
-    // 2. 匹配选择日期的有效性 (如果有班级起止时间，必须在周期内)
-    // 根据所选日期推算出“day”（1-7）对应那天的实际日期字符串 (YYYY-MM-DD)
-    const dateObj = new Date(selectedDate.value)
-    let selectedDayOfWeek = dateObj.getDay() || 7 // 1-7 (周一直到周日)
-    
-    // 计算所在周的星期一的日期
-    const diffToMonday = selectedDayOfWeek - 1
-    const monday = new Date(dateObj.getTime() - diffToMonday * 24 * 60 * 60 * 1000)
-    
-    // 计算当前遍历到的那个格子 (day) 的实际日期
-    const currentGridDateObj = new Date(monday.getTime() + (day - 1) * 24 * 60 * 60 * 1000)
-    const currentGridDateStr = currentGridDateObj.toISOString().split('T')[0]
-    
-    // 3. 判断这个格子本身的日期有没有超过班级定义的周期
-    if (c.startDate && c.endDate) {
-      if (currentGridDateStr < c.startDate || currentGridDateStr > c.endDate) {
-        return false
-      }
-    }
-
-    return true
-  })
 }
 
 const loadData = async () => {
@@ -460,6 +438,12 @@ onMounted(loadData)
 .info-item span {
   font-size: 15px;
   color: var(--text-primary);
+}
+
+.daily-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .week-grid {

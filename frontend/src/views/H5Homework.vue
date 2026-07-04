@@ -36,9 +36,9 @@
           📅 暂无课程排期
         </div>
         <div v-else>
-          <div v-for="day in scheduleDays" :key="day" class="schedule-day-block">
-            <div class="day-header">{{ dayNames[day - 1] }}</div>
-            <div v-for="course in getScheduleByDay(day)" :key="course.id" class="schedule-card">
+          <div v-for="date in scheduleDates" :key="date" class="schedule-day-block">
+            <div class="day-header">{{ formatScheduleDate(date) }}</div>
+            <div v-for="course in getScheduleByDate(date)" :key="course.id" class="schedule-card">
               <div class="sc-time">🕐 {{ course.startTime }} - {{ course.endTime }}</div>
               <div class="sc-detail" v-if="course.teacherName">👨‍🏫 {{ course.teacherName }}</div>
               <div class="sc-detail" v-if="course.location">📍 {{ course.location }}</div>
@@ -270,16 +270,21 @@ const tabs = [
   { key: 'attendance', icon: '📋', label: '签到' },
   { key: 'homework', icon: '📝', label: '作业' },
 ]
-const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
 // 课程表
 const scheduleLoading = ref(false)
 const scheduleList = ref([])
-const scheduleDays = computed(() => {
-  const days = [...new Set(scheduleList.value.map(c => c.dayOfWeek))]
-  return days.sort((a, b) => a - b)
+const scheduleDates = computed(() => {
+  const dates = [...new Set(scheduleList.value.map(c => c.courseDate))]
+  return dates.sort()
 })
-const getScheduleByDay = (day) => scheduleList.value.filter(c => c.dayOfWeek === day)
+const getScheduleByDate = (date) => scheduleList.value.filter(c => c.courseDate === date)
+const formatScheduleDate = (dateStr) => {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  return `${dateStr}（${dayNames[d.getDay()]}）`
+}
 
 // 签到
 const attendanceLoading = ref(false)

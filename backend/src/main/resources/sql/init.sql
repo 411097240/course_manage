@@ -48,8 +48,8 @@ CREATE TABLE IF NOT EXISTS `user_class` (
 CREATE TABLE IF NOT EXISTS `course` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `class_id` BIGINT NOT NULL COMMENT '班级ID',
+    `course_date` DATE NOT NULL COMMENT '上课日期',
     `teacher_name` VARCHAR(50) DEFAULT NULL COMMENT '授课教师',
-    `day_of_week` TINYINT NOT NULL COMMENT '星期几(1-7)',
     `start_time` VARCHAR(10) NOT NULL COMMENT '开始时间(HH:mm)',
     `end_time` VARCHAR(10) NOT NULL COMMENT '结束时间(HH:mm)',
     `location` VARCHAR(100) DEFAULT NULL COMMENT '上课地点',
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS `course` (
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    KEY `idx_class_id` (`class_id`)
+    KEY `idx_class_date` (`class_id`, `course_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程排课表';
 
 -- 学生表
