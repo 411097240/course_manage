@@ -48,6 +48,9 @@
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="editId ? '编辑学生' : '新增学生'" width="520px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+        <el-form-item label="学号" prop="studentNo">
+          <el-input v-model="form.studentNo" placeholder="请输入学号" />
+        </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" placeholder="请输入姓名" />
         </el-form-item>
@@ -58,9 +61,6 @@
         </el-form-item>
         <el-form-item label="手机号">
           <el-input v-model="form.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="身份证号">
-          <el-input v-model="form.idCard" placeholder="请输入身份证号" />
         </el-form-item>
         <el-form-item label="状态" v-if="editId">
           <el-select v-model="form.status">
@@ -111,8 +111,11 @@ const dialogVisible = ref(false)
 const editId = ref(null)
 const submitLoading = ref(false)
 const formRef = ref()
-const form = reactive({ name: '', gender: null, phone: '', idCard: '', status: 1 })
-const rules = { name: [{ required: true, message: '请输入姓名', trigger: 'blur' }] }
+const form = reactive({ studentNo: '', name: '', gender: null, phone: '', status: 1 })
+const rules = {
+  studentNo: [{ required: true, message: '请输入学号', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
+}
 
 // 入班相关
 const joinDialogVisible = ref(false)
@@ -135,10 +138,10 @@ const loadData = async () => {
 
 const openDialog = (row) => {
   editId.value = row ? row.id : null
+  form.studentNo = row ? row.studentNo : ''
   form.name = row ? row.name : ''
   form.gender = row ? row.gender : null
   form.phone = row ? row.phone : ''
-  form.idCard = row ? row.idCard : ''
   form.status = row ? row.status : 1
   dialogVisible.value = true
 }

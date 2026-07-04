@@ -20,7 +20,6 @@
       <div class="info-grid">
         <div class="info-item"><label>性别</label><span>{{ student.gender === 1 ? '男' : student.gender === 2 ? '女' : '-' }}</span></div>
         <div class="info-item"><label>手机号</label><span>{{ student.phone || '-' }}</span></div>
-        <div class="info-item"><label>身份证号</label><span>{{ student.idCard || '-' }}</span></div>
       </div>
     </div>
 
@@ -105,7 +104,7 @@
     <div class="print-voucher-container">
       <div class="voucher-header">
         <div class="brand-title">享学未来</div>
-        <h2>🎉 入班凭证 🎉</h2>
+        <h2>入班凭证</h2>
       </div>
 
       <div class="voucher-section" v-if="student">
@@ -119,7 +118,7 @@
       </div>
 
       <div class="voucher-section" v-if="selectedPrintClassData">
-        <h3 class="section-title">入选班级</h3>
+        <h3 class="section-title">报名班级</h3>
         <table class="voucher-table">
           <thead>
             <tr>

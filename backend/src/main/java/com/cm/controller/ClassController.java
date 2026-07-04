@@ -36,7 +36,10 @@ public class ClassController {
                 return Result.fail("无权限操作");
             }
         }
-        classInfoService.save(classInfo);
+        String error = classInfoService.save(classInfo);
+        if (error != null) {
+            return Result.fail(error);
+        }
         return Result.ok();
     }
 

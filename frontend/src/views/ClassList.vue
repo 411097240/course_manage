@@ -44,6 +44,9 @@
 
     <el-dialog v-model="dialogVisible" :title="editId ? '编辑班级' : '新建班级'" width="500px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+        <el-form-item v-if="!editId" label="班级编码" prop="classCode">
+          <el-input v-model="form.classCode" placeholder="请输入班级编码" maxlength="20" show-word-limit />
+        </el-form-item>
         <el-form-item label="班级名称" prop="className">
           <el-input v-model="form.className" placeholder="请输入班级名称" />
         </el-form-item>
@@ -71,7 +74,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api'
 import { useUserStore } from '../stores/user'
@@ -88,8 +91,16 @@ const dialogVisible = ref(false)
 const editId = ref(null)
 const submitLoading = ref(false)
 const formRef = ref()
-const form = reactive({ className: '', description: '', dateRange: null, status: 1 })
-const rules = { className: [{ required: true, message: '请输入班级名称', trigger: 'blur' }] }
+const form = reactive({ classCode: '', className: '', description: '', dateRange: null, status: 1 })
+const rules = computed(() => {
+  const base = {
+    className: [{ required: true, message: '请输入班级名称', trigger: 'blur' }]
+  }
+  if (!editId.value) {
+    base.classCode = [{ required: true, message: '请输入班级编码', trigger: 'blur' }]
+  }
+  return base
+})
 
 const loadData = async () => {
   loading.value = true
@@ -104,6 +115,7 @@ const loadData = async () => {
 
 const openDialog = (row) => {
   editId.value = row ? row.id : null
+  form.classCode = ''
   form.className = row ? row.className : ''
   form.description = row ? row.description : ''
   form.dateRange = (row && row.startDate) ? [row.startDate, row.endDate] : null
@@ -127,7 +139,7 @@ const handleSubmit = async () => {
       await api.updateClass({ id: editId.value, ...submitData })
       ElMessage.success('修改成功')
     } else {
-      await api.addClass(submitData)
+      await api.addClass({ ...submitData, classCode: form.classCode.trim() })
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false

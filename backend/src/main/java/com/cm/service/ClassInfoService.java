@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,9 +52,22 @@ public class ClassInfoService {
         return classInfoMapper.selectById(id);
     }
 
-    public void save(ClassInfo classInfo) {
-        classInfo.setClassCode(generateClassCode());
+    public String save(ClassInfo classInfo) {
+        String classCode = classInfo.getClassCode();
+        if (classCode == null || classCode.trim().isEmpty()) {
+            return "请输入班级编码";
+        }
+        classCode = classCode.trim();
+        classInfo.setClassCode(classCode);
+
+        Long count = classInfoMapper.selectCount(
+                new LambdaQueryWrapper<ClassInfo>().eq(ClassInfo::getClassCode, classCode));
+        if (count != null && count > 0) {
+            return "班级编码已存在，请更换";
+        }
+
         classInfoMapper.insert(classInfo);
+        return null;
     }
 
     public void update(ClassInfo classInfo) {
@@ -64,20 +76,5 @@ public class ClassInfoService {
 
     public void deleteById(Long id) {
         classInfoMapper.deleteById(id);
-    }
-
-    /**
-     * 生成班级编码：BJ{年份}-{4位序号}
-     */
-    private synchronized String generateClassCode() {
-        String year = String.valueOf(LocalDate.now().getYear());
-        String maxCode = classInfoMapper.getMaxCodeByYear(year);
-        int seq = 1;
-        if (maxCode != null) {
-            // BJ2026-0001 -> 取最后4位
-            String seqStr = maxCode.substring(maxCode.lastIndexOf('-') + 1);
-            seq = Integer.parseInt(seqStr) + 1;
-        }
-        return String.format("BJ%s-%04d", year, seq);
     }
 }

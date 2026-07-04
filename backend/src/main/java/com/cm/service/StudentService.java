@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -108,33 +107,45 @@ public class StudentService {
         return studentMapper.selectById(id);
     }
 
-    public void save(Student student) {
-        student.setStudentNo(generateStudentNo());
+    public String save(Student student) {
+        String error = validateStudentNo(student.getStudentNo(), null);
+        if (error != null) {
+            return error;
+        }
+        student.setStudentNo(student.getStudentNo().trim());
         student.setAccessToken(UUID.randomUUID().toString().replace("-", ""));
         studentMapper.insert(student);
+        return null;
     }
 
-    public void update(Student student) {
+    public String update(Student student) {
+        String error = validateStudentNo(student.getStudentNo(), student.getId());
+        if (error != null) {
+            return error;
+        }
+        student.setStudentNo(student.getStudentNo().trim());
         studentMapper.updateById(student);
+        return null;
+    }
+
+    private String validateStudentNo(String studentNo, Long excludeId) {
+        if (studentNo == null || studentNo.trim().isEmpty()) {
+            return "请输入学号";
+        }
+        LambdaQueryWrapper<Student> wrapper = new LambdaQueryWrapper<Student>()
+                .eq(Student::getStudentNo, studentNo.trim());
+        if (excludeId != null) {
+            wrapper.ne(Student::getId, excludeId);
+        }
+        Long count = studentMapper.selectCount(wrapper);
+        if (count != null && count > 0) {
+            return "学号已存在，请更换";
+        }
+        return null;
     }
 
     public void deleteById(Long id) {
         studentMapper.deleteById(id);
-    }
-
-    /**
-     * 生成学号：S{年份}{5位序号}
-     */
-    private synchronized String generateStudentNo() {
-        String year = String.valueOf(LocalDate.now().getYear());
-        String maxNo = studentMapper.getMaxNoByYear(year);
-        int seq = 1;
-        if (maxNo != null) {
-            // S202600001 -> 取后5位
-            String seqStr = maxNo.substring(maxNo.length() - 5);
-            seq = Integer.parseInt(seqStr) + 1;
-        }
-        return String.format("S%s%05d", year, seq);
     }
 
     /**

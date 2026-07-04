@@ -38,7 +38,10 @@ public class StudentController {
                 return Result.fail("无权限操作");
             }
         }
-        studentService.save(student);
+        String error = studentService.save(student);
+        if (error != null) {
+            return Result.fail(error);
+        }
         return Result.ok();
     }
 
@@ -51,7 +54,10 @@ public class StudentController {
                 return Result.fail("无权限操作");
             }
         }
-        studentService.update(student);
+        String error = studentService.update(student);
+        if (error != null) {
+            return Result.fail(error);
+        }
         return Result.ok();
     }
 
