@@ -46,6 +46,15 @@
           </svg>
           <span v-show="!isCollapsed">学生管理</span>
         </router-link>
+        <router-link v-if="userStore.isAdmin()" to="/payment" class="nav-item" active-class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+            <line x1="6" y1="15" x2="6.01" y2="15"/>
+            <line x1="10" y1="15" x2="14" y2="15"/>
+          </svg>
+          <span v-show="!isCollapsed">缴费管理</span>
+        </router-link>
         <router-link to="/homework" class="nav-item" active-class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>

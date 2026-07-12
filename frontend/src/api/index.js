@@ -84,6 +84,11 @@ export default {
   leaveClass: (data) => request.post('/student-class/leave', data),
   getStudentClasses: (studentId) => request.get('/student-class/list', { params: { studentId } }),
 
+  // 学生缴费（管理员）
+  getPaymentList: (params) => request.get('/student-payment/list', { params }),
+  getPaymentByStudent: (studentId) => request.get(`/student-payment/student/${studentId}`),
+  savePayment: (data) => request.put('/student-payment', data),
+
   // 教师班级分配
   getUserClasses: (userId) => request.get('/user-class/list', { params: { userId } }),
   assignClass: (data) => request.post('/user-class/assign', data),

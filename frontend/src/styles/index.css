@@ -60,7 +60,17 @@ body {
   --el-table-row-hover-bg-color: rgba(99, 102, 241, 0.08) !important;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  width: 100% !important;
+}
+
+.table-scroll-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table-scroll-wrap .el-table {
+  width: max-content !important;
+  min-width: 100%;
 }
 
 .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {

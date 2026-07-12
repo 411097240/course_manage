@@ -24,43 +24,62 @@
     </div>
 
     <!-- 已加入班级 -->
-    <div class="page-card" style="margin-top:20px">
+    <div class="page-card class-section-card" style="margin-top:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h3 style="color:var(--text-primary)">📖 已加入班级</h3>
       </div>
-      <el-table :data="classes" v-loading="classLoading">
-        <el-table-column prop="classCode" label="班级编码" width="150" />
-        <el-table-column prop="className" label="班级名称" min-width="150" />
+      <div class="class-table-wrap">
+      <el-table :data="classes" v-loading="classLoading" class="class-table" style="width:100%">
+        <el-table-column prop="classCode" label="班级编码" min-width="130" />
+        <el-table-column prop="className" label="班级名称" min-width="150" show-overflow-tooltip />
         <el-table-column label="培训周期" min-width="200">
           <template #default="{ row }">
             <span v-if="row.startDate">{{ row.startDate }} ~ {{ row.endDate }}</span>
             <span v-else style="color:var(--text-muted)">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="班级状态" width="100">
+        <el-table-column label="班级状态" min-width="100">
           <template #default="{ row }">
             <span :class="['status-badge', row.classStatus === 1 ? 'active' : 'inactive']">
               {{ row.classStatus === 1 ? '进行中' : '已结束' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="在读状态" width="100">
+        <el-table-column label="在读状态" min-width="100">
           <template #default="{ row }">
             <span :class="['status-badge', row.status === 1 ? 'active' : 'inactive']">
               {{ row.status === 1 ? '在读' : '已退出' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="入班时间" width="180">
+        <el-table-column label="入班时间" min-width="160">
           <template #default="{ row }">{{ formatTime(row.joinTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <template v-if="userStore.isAdmin()">
+          <el-table-column label="缴费信息" min-width="220">
+            <template #default="{ row }">
+              <div class="payment-cell">
+                <span>应缴 {{ formatMoney(row.amountDue) }}</span>
+                <span>实收 {{ formatMoney(row.amountReceived) }}</span>
+                <span :style="{ color: balanceColor(row.balance) }">差额 {{ formatBalance(row.balance) }}</span>
+                <span :class="['status-badge', paymentStatusClass(row.paymentStatus)]">
+                  {{ paymentStatusLabel(row.paymentStatus) }}
+                </span>
+              </div>
+            </template>
+          </el-table-column>
+        </template>
+        <el-table-column label="操作" :min-width="userStore.isAdmin() ? 200 : 96" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === 1" size="small" type="primary" plain @click="copyHomeworkLink(row.classId)">空间链接</el-button>
-            <el-button v-if="row.status === 1 && row.classStatus === 1" size="small" type="danger" @click="handleLeave(row.classId)">出班</el-button>
+            <div class="action-buttons">
+              <el-button v-if="row.status === 1" link type="primary" size="small" @click="copyHomeworkLink(row.classId)">空间链接</el-button>
+              <el-button v-if="userStore.isAdmin()" link type="primary" size="small" @click="openPaymentDialog(row)">编辑缴费</el-button>
+              <el-button v-if="row.status === 1 && row.classStatus === 1" link type="danger" size="small" @click="handleLeave(row.classId)">出班</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
+      </div>
     </div>
 
     <!-- 课程表 -->
@@ -83,6 +102,33 @@
       </div>
     </div>
     
+    <!-- 编辑缴费弹窗 -->
+    <el-dialog v-model="paymentDialogVisible" title="编辑缴费信息" width="480px" destroy-on-close>
+      <div v-if="paymentEditRow" style="margin-bottom:16px;color:var(--text-secondary);font-size:14px">
+        {{ student?.name }}（{{ student?.studentNo }}）— {{ paymentEditRow.className }}
+      </div>
+      <el-form ref="paymentFormRef" :model="paymentForm" :rules="paymentRules" label-width="90px">
+        <el-form-item label="应缴金额" prop="amountDue">
+          <el-input-number v-model="paymentForm.amountDue" :min="0" :precision="2" :step="100" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="实收金额" prop="amountReceived">
+          <el-input-number v-model="paymentForm.amountReceived" :min="0" :precision="2" :step="100" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="差额">
+          <span :style="{ color: balanceColor(previewBalance), fontWeight: 600 }">{{ formatBalance(previewBalance) }}</span>
+        </el-form-item>
+        <el-form-item label="缴费状态">
+          <span :class="['status-badge', paymentStatusClass(previewStatus)]">
+            {{ paymentStatusLabel(previewStatus) }}
+          </span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="paymentDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="paymentSubmitLoading" @click="handlePaymentSubmit">保存</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 凭证班级选择弹窗 -->
     <el-dialog v-model="printDialogVisible" title="选择打印班级" width="400px" destroy-on-close>
       <p style="margin-bottom:12px;color:var(--text-secondary)">请选择要打印入班凭证的班级：</p>
@@ -174,13 +220,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QRCode from 'qrcode'
 import api from '../api'
+import { useUserStore } from '../stores/user'
 
 const route = useRoute()
+const userStore = useUserStore()
 const studentId = Number(route.params.id)
 const student = ref(null)
 const classes = ref([])
@@ -193,6 +241,74 @@ const h5BaseUrl = ref(window.location.origin)
 const qrCodeUrl = ref('')
 
 const selectedDate = ref(new Date().toISOString().split('T')[0])
+
+const paymentDialogVisible = ref(false)
+const paymentEditRow = ref(null)
+const paymentSubmitLoading = ref(false)
+const paymentFormRef = ref(null)
+const paymentForm = reactive({
+  amountDue: 0,
+  amountReceived: 0
+})
+const paymentRules = {
+  amountDue: [{ required: true, message: '请输入应缴金额', trigger: 'blur' }],
+  amountReceived: [{ required: true, message: '请输入实收金额', trigger: 'blur' }]
+}
+
+const previewBalance = computed(() => {
+  const due = paymentForm.amountDue ?? 0
+  const received = paymentForm.amountReceived ?? 0
+  return received - due
+})
+
+const previewStatus = computed(() => {
+  const b = previewBalance.value
+  if (b > 0) return 1
+  if (b < 0) return 3
+  return 2
+})
+
+const formatMoney = (val) => Number(val ?? 0).toFixed(2)
+
+const formatBalance = (val) => {
+  const n = Number(val ?? 0)
+  const fixed = n.toFixed(2)
+  if (n > 0) return `+${fixed}`
+  return fixed
+}
+
+const balanceColor = (balance) => {
+  const n = Number(balance ?? 0)
+  if (n > 0) return '#22c55e'
+  if (n < 0) return '#ef4444'
+  return 'var(--text-primary)'
+}
+
+const paymentStatusLabel = (status) => {
+  if (status === 1) return '结余'
+  if (status === 3) return '欠费'
+  return '结清'
+}
+
+const paymentStatusClass = (status) => {
+  if (status === 1) return 'active'
+  if (status === 3) return 'inactive'
+  return ''
+}
+
+const mergePaymentData = (classList, paymentList) => {
+  const paymentMap = {}
+  for (const p of paymentList || []) {
+    paymentMap[p.studentClassId] = p
+  }
+  return classList.map(c => {
+    const p = paymentMap[c.studentClassId]
+    if (p) {
+      return { ...c, amountDue: p.amountDue, amountReceived: p.amountReceived, balance: p.balance, paymentStatus: p.paymentStatus }
+    }
+    return { ...c, amountDue: 0, amountReceived: 0, balance: 0, paymentStatus: 2 }
+  })
+}
 
 const formatDateLabel = (dateStr) => {
   if (!dateStr) return '-'
@@ -256,7 +372,14 @@ const loadData = async () => {
   classLoading.value = true
   try {
     const cRes = await api.getStudentClasses(studentId)
-    classes.value = cRes.data || []
+    let classData = cRes.data || []
+    if (userStore.isAdmin()) {
+      try {
+        const pRes = await api.getPaymentByStudent(studentId)
+        classData = mergePaymentData(classData, pRes.data)
+      } catch (e) { /* 无权限时忽略 */ }
+    }
+    classes.value = classData
   } finally {
     classLoading.value = false
   }
@@ -310,6 +433,31 @@ const handleLeave = (classId) => {
     ElMessage.success('出班成功')
     loadData()
   }).catch(() => {})
+}
+
+const openPaymentDialog = (row) => {
+  paymentEditRow.value = row
+  paymentForm.amountDue = Number(row.amountDue ?? 0)
+  paymentForm.amountReceived = Number(row.amountReceived ?? 0)
+  paymentDialogVisible.value = true
+}
+
+const handlePaymentSubmit = async () => {
+  const valid = await paymentFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  paymentSubmitLoading.value = true
+  try {
+    await api.savePayment({
+      studentClassId: paymentEditRow.value.studentClassId,
+      amountDue: paymentForm.amountDue,
+      amountReceived: paymentForm.amountReceived
+    })
+    ElMessage.success('保存成功')
+    paymentDialogVisible.value = false
+    loadData()
+  } finally {
+    paymentSubmitLoading.value = false
+  }
 }
 
 const openPrintDialog = () => {
@@ -385,6 +533,52 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+.student-detail {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.class-section-card {
+  max-width: 100%;
+}
+
+.class-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.class-table-wrap :deep(.class-table) {
+  width: max-content !important;
+  min-width: 100%;
+}
+
+.class-table-wrap :deep(.el-table__fixed-right .cell) {
+  overflow: visible;
+}
+
+.payment-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+}
+
+.action-buttons :deep(.el-button) {
+  margin: 0;
+  padding: 0;
+  height: auto;
+}
+
 .info-card .info-header {
   display: flex;
   align-items: center;
@@ -509,6 +703,7 @@ onMounted(loadData)
   font-size: 12px;
   padding: 20px 0;
 }
+
 
 /* --- 打印容器隐藏 --- */
 .print-voucher-container {

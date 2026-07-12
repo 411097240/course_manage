@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
 
 const routes = [
@@ -86,6 +87,12 @@ const routes = [
         meta: { title: '学生详情' }
       },
       {
+        path: 'payment',
+        name: 'PaymentList',
+        component: () => import('../views/PaymentList.vue'),
+        meta: { title: '缴费管理', adminOnly: true }
+      },
+      {
         path: 'assign',
         name: 'TeacherAssign',
         component: () => import('../views/TeacherAssign.vue'),
@@ -119,6 +126,15 @@ router.beforeEach((to, from, next) => {
       next('/h5/login?redirect=' + encodeURIComponent(to.fullPath))
     } else {
       next('/login')
+    }
+  } else if (to.meta.adminOnly) {
+    const userStore = useUserStore()
+    userStore.loadFromStorage()
+    if (!userStore.isAdmin()) {
+      ElMessage.warning('无权限访问该页面')
+      next('/dashboard')
+    } else {
+      next()
     }
   } else {
     next()
