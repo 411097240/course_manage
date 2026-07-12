@@ -16,6 +16,7 @@
           <el-option v-for="c in classList" :key="c.id" :label="`${c.classCode} - ${c.className}`" :value="c.id" />
         </el-select>
         <el-button type="primary" @click="loadData">搜索</el-button>
+        <el-button :loading="exportLoading" @click="handleExport">导出</el-button>
       </div>
       <el-table :data="tableData" v-loading="loading" style="width:100%">
         <el-table-column prop="studentNo" label="学号" min-width="130" />
@@ -87,6 +88,7 @@ import { ElMessage } from 'element-plus'
 import api from '../api'
 
 const loading = ref(false)
+const exportLoading = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const current = ref(1)
@@ -171,6 +173,35 @@ const loadData = async () => {
     total.value = res.data.total || 0
   } finally {
     loading.value = false
+  }
+}
+
+const buildQueryParams = () => {
+  const params = {}
+  if (keyword.value) params.keyword = keyword.value
+  if (paymentStatus.value) params.paymentStatus = paymentStatus.value
+  if (classId.value) params.classId = classId.value
+  return params
+}
+
+const handleExport = async () => {
+  exportLoading.value = true
+  try {
+    const res = await api.exportPayment(buildQueryParams())
+    const blob = res.data
+    const count = res.headers['x-export-count'] || total.value
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    link.href = url
+    link.download = `缴费记录_${date}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    ElMessage.success(`导出成功，共 ${count} 条`)
+  } finally {
+    exportLoading.value = false
   }
 }
 

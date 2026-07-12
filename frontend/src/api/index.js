@@ -19,6 +19,22 @@ request.interceptors.request.use(config => {
 // 响应拦截器
 request.interceptors.response.use(
   response => {
+    if (response.config.responseType === 'blob') {
+      const blob = response.data
+      if (blob.type && blob.type.includes('application/json')) {
+        return blob.text().then(text => {
+          try {
+            const json = JSON.parse(text)
+            ElMessage.error(json.msg || '请求失败')
+            return Promise.reject(new Error(json.msg || '请求失败'))
+          } catch (e) {
+            ElMessage.error('请求失败')
+            return Promise.reject(e)
+          }
+        })
+      }
+      return response
+    }
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.msg || '请求失败')
@@ -86,6 +102,7 @@ export default {
 
   // 学生缴费（管理员）
   getPaymentList: (params) => request.get('/student-payment/list', { params }),
+  exportPayment: (params) => request.get('/student-payment/export', { params, responseType: 'blob' }),
   getPaymentByStudent: (studentId) => request.get(`/student-payment/student/${studentId}`),
   savePayment: (data) => request.put('/student-payment', data),
 

@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,14 @@ public class StudentPaymentService {
     private ClassInfoMapper classInfoMapper;
 
     public Page<StudentPaymentVO> page(long current, long size, String keyword, Integer paymentStatus, Long classId) {
+        List<StudentPaymentVO> all = listFiltered(keyword, paymentStatus, classId);
+        if (all.isEmpty()) {
+            return emptyPage(current, size);
+        }
+        return paginate(all, current, size);
+    }
+
+    public List<StudentPaymentVO> listFiltered(String keyword, Integer paymentStatus, Long classId) {
         LambdaQueryWrapper<StudentClass> scWrapper = new LambdaQueryWrapper<>();
         if (classId != null) {
             scWrapper.eq(StudentClass::getClassId, classId);
@@ -44,7 +53,7 @@ public class StudentPaymentService {
 
         List<StudentClass> scList = studentClassMapper.selectList(scWrapper);
         if (scList.isEmpty()) {
-            return emptyPage(current, size);
+            return Collections.emptyList();
         }
 
         List<StudentPaymentVO> all = buildVOList(scList);
@@ -61,8 +70,29 @@ public class StudentPaymentService {
                     .filter(v -> paymentStatus.equals(v.getPaymentStatus()))
                     .collect(Collectors.toList());
         }
+        return all;
+    }
 
-        return paginate(all, current, size);
+    public byte[] exportCsv(List<StudentPaymentVO> all) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("学号,姓名,班级编码,班级名称,应缴金额,实收金额,差额,缴费状态\n");
+        for (StudentPaymentVO vo : all) {
+            sb.append(escapeCsv(vo.getStudentNo())).append(',')
+                    .append(escapeCsv(vo.getStudentName())).append(',')
+                    .append(escapeCsv(vo.getClassCode())).append(',')
+                    .append(escapeCsv(vo.getClassName())).append(',')
+                    .append(formatMoney(vo.getAmountDue())).append(',')
+                    .append(formatMoney(vo.getAmountReceived())).append(',')
+                    .append(formatBalance(vo.getBalance())).append(',')
+                    .append(escapeCsv(paymentStatusLabel(vo.getPaymentStatus())))
+                    .append('\n');
+        }
+        byte[] bom = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+        byte[] body = sb.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] result = new byte[bom.length + body.length];
+        System.arraycopy(bom, 0, result, 0, bom.length);
+        System.arraycopy(body, 0, result, bom.length, body.length);
+        return result;
     }
 
     public List<StudentPaymentVO> listByStudent(Long studentId) {
@@ -192,5 +222,42 @@ public class StudentPaymentService {
         int to = (int) Math.min(from + size, all.size());
         page.setRecords(all.subList(from, to));
         return page;
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
+    private String formatMoney(BigDecimal value) {
+        BigDecimal amount = value != null ? value : BigDecimal.ZERO;
+        return amount.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString();
+    }
+
+    private String formatBalance(BigDecimal balance) {
+        BigDecimal value = balance != null ? balance : BigDecimal.ZERO;
+        String fixed = value.setScale(2, BigDecimal.ROUND_HALF_UP).toPlainString();
+        if (value.compareTo(BigDecimal.ZERO) > 0) {
+            return "+" + fixed;
+        }
+        return fixed;
+    }
+
+    private String paymentStatusLabel(Integer status) {
+        if (status == null) {
+            return "结清";
+        }
+        if (status == STATUS_SURPLUS) {
+            return "结余";
+        }
+        if (status == STATUS_ARREARS) {
+            return "欠费";
+        }
+        return "结清";
     }
 }
