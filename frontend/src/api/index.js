@@ -53,6 +53,17 @@ export default {
   updateClass: (data) => request.put('/class', data),
   deleteClass: (id) => request.delete(`/class/${id}`),
 
+  // 教室
+  getClassroomList: (params) => request.get('/classroom/list', { params }),
+  getAllClassrooms: () => request.get('/classroom/all'),
+  getClassroomReservations: (id, params) => request.get(`/classroom/${id}/reservations`, { params }),
+  addClassroom: (data) => request.post('/classroom', data),
+  updateClassroom: (data) => request.put('/classroom', data),
+  deleteClassroom: (id) => request.delete(`/classroom/${id}`),
+  addManualReservation: (data) => request.post('/classroom/reservation', data),
+  updateManualReservation: (data) => request.put('/classroom/reservation', data),
+  deleteManualReservation: (id) => request.delete(`/classroom/reservation/${id}`),
+
   // 课程
   getCourseList: (classId) => request.get('/course/list', { params: { classId } }),
   addCourse: (data) => request.post('/course', data),

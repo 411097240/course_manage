@@ -10,5 +10,6 @@ public class CourseBatchDTO {
     private String teacherName;
     private String startTime;
     private String endTime;
+    private Long classroomId;
     private String location;
 }

@@ -56,6 +56,12 @@ const routes = [
         meta: { title: '班级管理' }
       },
       {
+        path: 'classroom',
+        name: 'ClassroomList',
+        component: () => import('../views/ClassroomList.vue'),
+        meta: { title: '教室管理' }
+      },
+      {
         path: 'class/:id/course',
         name: 'CourseList',
         component: () => import('../views/CourseList.vue'),

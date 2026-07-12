@@ -67,7 +67,9 @@
           <el-time-picker v-model="form.endTime" format="HH:mm" value-format="HH:mm" placeholder="结束" />
         </el-form-item>
         <el-form-item label="上课地点">
-          <el-input v-model="form.location" placeholder="请输入上课地点" />
+          <el-select v-model="form.classroomId" placeholder="请选择教室" filterable clearable style="width:100%">
+            <el-option v-for="c in classrooms" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -88,6 +90,7 @@ const route = useRoute()
 const classId = Number(route.params.id)
 const classInfo = ref({})
 const courses = ref([])
+const classrooms = ref([])
 const loading = ref(false)
 const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
@@ -101,7 +104,7 @@ const form = reactive({
   courseDates: [],
   startTime: '',
   endTime: '',
-  location: ''
+  classroomId: null
 })
 
 const rules = {
@@ -138,12 +141,14 @@ const disabledDate = (date) => {
 const loadData = async () => {
   loading.value = true
   try {
-    const [classRes, courseRes] = await Promise.all([
+    const [classRes, courseRes, classroomRes] = await Promise.all([
       api.getClassById(classId),
-      api.getCourseList(classId)
+      api.getCourseList(classId),
+      api.getAllClassrooms()
     ])
     classInfo.value = classRes.data || {}
     courses.value = courseRes.data || []
+    classrooms.value = classroomRes.data || []
   } finally {
     loading.value = false
   }
@@ -156,7 +161,7 @@ const openDialog = (row) => {
   form.courseDates = []
   form.startTime = row ? row.startTime : ''
   form.endTime = row ? row.endTime : ''
-  form.location = row ? row.location : ''
+  form.classroomId = row ? row.classroomId : null
   dialogVisible.value = true
 }
 
@@ -173,7 +178,7 @@ const handleSubmit = async () => {
         courseDate: form.courseDate,
         startTime: form.startTime,
         endTime: form.endTime,
-        location: form.location
+        classroomId: form.classroomId
       })
       ElMessage.success('修改成功')
     } else {
@@ -183,7 +188,7 @@ const handleSubmit = async () => {
         teacherName: form.teacherName,
         startTime: form.startTime,
         endTime: form.endTime,
-        location: form.location
+        classroomId: form.classroomId
       })
       ElMessage.success(`成功添加 ${form.courseDates.length} 条课程`)
     }

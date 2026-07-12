@@ -30,6 +30,15 @@
           </svg>
           <span v-show="!isCollapsed">班级管理</span>
         </router-link>
+        <router-link to="/classroom" class="nav-item" active-class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21h18"/>
+            <path d="M5 21V7l8-4v18"/>
+            <path d="M19 21V11l-6-4"/>
+            <path d="M9 9v0"/><path d="M9 12v0"/><path d="M9 15v0"/><path d="M9 18v0"/>
+          </svg>
+          <span v-show="!isCollapsed">教室管理</span>
+        </router-link>
         <router-link to="/student" class="nav-item" active-class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

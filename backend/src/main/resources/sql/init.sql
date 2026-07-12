@@ -44,6 +44,18 @@ CREATE TABLE IF NOT EXISTS `user_class` (
     UNIQUE KEY `uk_user_class` (`user_id`, `class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户-班级关联表';
 
+-- 教室表
+CREATE TABLE IF NOT EXISTS `classroom` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(100) NOT NULL COMMENT '教室名称',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教室表';
+
 -- 课程表
 CREATE TABLE IF NOT EXISTS `course` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
@@ -52,6 +64,7 @@ CREATE TABLE IF NOT EXISTS `course` (
     `teacher_name` VARCHAR(50) DEFAULT NULL COMMENT '授课教师',
     `start_time` VARCHAR(10) NOT NULL COMMENT '开始时间(HH:mm)',
     `end_time` VARCHAR(10) NOT NULL COMMENT '结束时间(HH:mm)',
+    `classroom_id` BIGINT DEFAULT NULL COMMENT '教室ID',
     `location` VARCHAR(100) DEFAULT NULL COMMENT '上课地点',
     `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -59,6 +72,23 @@ CREATE TABLE IF NOT EXISTS `course` (
     PRIMARY KEY (`id`),
     KEY `idx_class_date` (`class_id`, `course_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程排课表';
+
+-- 教室预约表
+CREATE TABLE IF NOT EXISTS `classroom_reservation` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `classroom_id` BIGINT NOT NULL COMMENT '教室ID',
+    `course_id` BIGINT DEFAULT NULL COMMENT '课程ID(手动预约为空)',
+    `title` VARCHAR(100) DEFAULT NULL COMMENT '手动预约事由',
+    `reserve_date` DATE NOT NULL COMMENT '预约日期',
+    `start_time` VARCHAR(10) NOT NULL COMMENT '开始时间(HH:mm)',
+    `end_time` VARCHAR(10) NOT NULL COMMENT '结束时间(HH:mm)',
+    `deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_course_id` (`course_id`),
+    KEY `idx_classroom_date` (`classroom_id`, `reserve_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教室预约表';
 
 -- 学生表
 CREATE TABLE IF NOT EXISTS `student` (

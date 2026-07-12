@@ -1,7 +1,7 @@
 <template>
   <div class="h5-history">
     <div class="header">
-      <h2 style="margin:0; font-size:18px;">历史签到记录</h2>
+      <h2 style="margin:0; font-size:18px; font-weight:800; color:#111;">历史签到记录</h2>
       <el-button @click="$router.push('/h5/classes')" size="small">返回</el-button>
     </div>
     
